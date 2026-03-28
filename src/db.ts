@@ -9,6 +9,7 @@ export interface Unit {
     country?: string;
     status: string;
     parentId?: string;
+    taskForceId?: string;
     lastRTBDate?: string;
     locationLat?: number;
     locationLng?: number;
@@ -48,11 +49,20 @@ export interface Mission {
     description?: string;
 }
 
+export interface TaskForce {
+    id: string;
+    name: string;
+    operationId?: string;
+    description?: string;
+    createdAt: number;
+}
+
 class DB extends Dexie {
     units!: Table<Unit, string>;
     deployments!: Table<Deployment, string>;
     operations!: Table<Operation, string>;
     missions!: Table<Mission, string>;
+    taskForces!: Table<TaskForce, string>;
 
     constructor() {
         super('unitDB');
@@ -79,6 +89,13 @@ class DB extends Dexie {
             deployments: 'id, unitId, operationId',
             operations: 'id, name, status, startDate',
             missions: 'id, unitId, operationId'
+        });
+        this.version(6).stores({
+            units: 'id, name, parentId, echelon, country, taskForceId',
+            deployments: 'id, unitId, operationId',
+            operations: 'id, name, status, startDate',
+            missions: 'id, unitId, operationId',
+            taskForces: 'id, name, operationId'
         });
     }
 }

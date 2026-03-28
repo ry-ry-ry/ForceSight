@@ -6,10 +6,14 @@ import { today } from '../utils';
 export default function OperationsManager({ onSelectUnit }: any) {
     const [editing, setEditing] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
+    const [editingTaskForce, setEditingTaskForce] = useState<string | null>(null);
+    const [creatingTaskForce, setCreatingTaskForce] = useState(false);
+    const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
 
     const operations = useLiveQuery(() => db.operations.orderBy('startDate').reverse().toArray(), []);
     const units = useLiveQuery(() => db.units.toArray(), []);
     const deployments = useLiveQuery(() => db.deployments.toArray(), []);
+    const taskForces = useLiveQuery(() => db.taskForces.toArray(), []);
 
     const handleCreate = () => {
         setCreating(true);
@@ -24,6 +28,28 @@ export default function OperationsManager({ onSelectUnit }: any) {
             await db.operations.delete(id);
         }
     };
+
+    const handleCreateTaskForce = (operationId?: string) => {
+        setSelectedOperation(operationId || null);
+        setCreatingTaskForce(true);
+    };
+
+    const handleEditTaskForce = (id: string) => {
+        setEditingTaskForce(id);
+    };
+
+    const handleDeleteTaskForce = async (id: string) => {
+        if (confirm('Delete this task force? Units will be unassigned.')) {
+            // Unassign units from this task force
+            const unitsInTF = units?.filter(u => u.taskForceId === id) || [];
+            for (const unit of unitsInTF) {
+                await db.units.update(unit.id, { taskForceId: undefined });
+            }
+            await db.taskForces.delete(id);
+        }
+    };
+
+    const unassignedTaskForces = taskForces?.filter(tf => !tf.operationId) || [];
 
     return (
         <div style={{ padding: 'var(--spacing-2xl)', maxWidth: 1400, margin: '0 auto' }}>
@@ -75,13 +101,71 @@ export default function OperationsManager({ onSelectUnit }: any) {
                             operation={op}
                             units={units}
                             deployments={deployments}
+                            taskForces={taskForces}
                             onEdit={() => handleEdit(op.id)}
                             onDelete={() => handleDelete(op.id)}
                             onSelectUnit={onSelectUnit}
+                            onCreateTaskForce={() => handleCreateTaskForce(op.id)}
+                            onEditTaskForce={handleEditTaskForce}
+                            onDeleteTaskForce={handleDeleteTaskForce}
                             delay={index * 0.1}
                         />
                     )
                 ))}
+
+                {/* Unassigned Task Forces */}
+                {unassignedTaskForces.length > 0 && (
+                    <div className="card animate-fade-in">
+                        <h2>Unassigned Task Forces</h2>
+                        <div style={{ marginTop: 'var(--spacing-lg)', display: 'grid', gap: 'var(--spacing-md)' }}>
+                            {unassignedTaskForces.map(tf => (
+                                editingTaskForce === tf.id ? (
+                                    <TaskForceForm
+                                        key={tf.id}
+                                        taskForce={tf}
+                                        units={units}
+                                        onDone={() => setEditingTaskForce(null)}
+                                    />
+                                ) : (
+                                    <TaskForceCard
+                                        key={tf.id}
+                                        taskForce={tf}
+                                        units={units}
+                                        onEdit={() => handleEditTaskForce(tf.id)}
+                                        onDelete={() => handleDeleteTaskForce(tf.id)}
+                                        onSelectUnit={onSelectUnit}
+                                    />
+                                )
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Create Unassigned Task Force Button */}
+                <button
+                    onClick={() => handleCreateTaskForce()}
+                    style={{
+                        padding: 'var(--spacing-lg)',
+                        fontSize: 14,
+                        background: 'var(--color-bg-elevated)',
+                        border: '2px dashed var(--color-border-accent)'
+                    }}
+                >
+                    + Create Unassigned Task Force
+                </button>
+
+                {creatingTaskForce && (
+                    <div className="animate-fade-in">
+                        <TaskForceForm
+                            operationId={selectedOperation}
+                            units={units}
+                            onDone={() => {
+                                setCreatingTaskForce(false);
+                                setSelectedOperation(null);
+                            }}
+                        />
+                    </div>
+                )}
 
                 {!operations?.length && !creating && (
                     <div className="card" style={{
@@ -98,13 +182,25 @@ export default function OperationsManager({ onSelectUnit }: any) {
     );
 }
 
-function OperationCard({ operation, units, deployments, onEdit, onDelete, onSelectUnit, delay }: any) {
+function OperationCard({ operation, units, deployments, taskForces, onEdit, onDelete, onSelectUnit, onCreateTaskForce, onEditTaskForce, onDeleteTaskForce, delay }: any) {
+    const [showTaskForceForm, setShowTaskForceForm] = useState(false);
+    const [editingTaskForce, setEditingTaskForce] = useState<string | null>(null);
+    const [showAssignMenu, setShowAssignMenu] = useState(false);
+
     const assignedDeployments = deployments?.filter((d: any) => d.operationId === operation.id) || [];
     const assignedUnits = assignedDeployments.map((d: any) =>
         units?.find((u: any) => u.id === d.unitId)
     ).filter(Boolean);
 
+    const operationTaskForces = taskForces?.filter((tf: any) => tf.operationId === operation.id) || [];
+    const unassignedTaskForces = taskForces?.filter((tf: any) => !tf.operationId) || [];
+
     const isActive = !operation.endDate;
+
+    const handleAssignTaskForce = async (taskForceId: string) => {
+        await db.taskForces.update(taskForceId, { operationId: operation.id });
+        setShowAssignMenu(false);
+    };
 
     const getStatusColor = (status: string) => {
         const colors: any = {
@@ -208,63 +304,260 @@ function OperationCard({ operation, units, deployments, onEdit, onDelete, onSele
 
             <div className="tactical-divider" style={{ margin: 'var(--spacing-lg) 0' }}></div>
 
+            {/* Task Forces */}
+            {operationTaskForces.length > 0 && (
+                <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+                        <h3 style={{ marginBottom: 0 }}>Task Forces ({operationTaskForces.length})</h3>
+                        <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
+                            {unassignedTaskForces.length > 0 && (
+                                <button
+                                    onClick={() => setShowAssignMenu(!showAssignMenu)}
+                                    style={{ fontSize: 11, padding: '4px 8px' }}
+                                >
+                                    Assign Existing
+                                </button>
+                            )}
+                            <button onClick={() => setShowTaskForceForm(true)} style={{ fontSize: 11, padding: '4px 8px' }}>
+                                + Add Task Force
+                            </button>
+                        </div>
+                    </div>
+
+                    {showAssignMenu && unassignedTaskForces.length > 0 && (
+                        <div style={{
+                            marginBottom: 'var(--spacing-md)',
+                            padding: 'var(--spacing-sm)',
+                            background: 'var(--color-bg-elevated)',
+                            border: '1px solid var(--color-border-accent)',
+                            borderRadius: 'var(--radius-sm)'
+                        }}>
+                            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-xs)' }}>
+                                Select a task force to assign:
+                            </div>
+                            {unassignedTaskForces.map((tf: any) => (
+                                <div
+                                    key={tf.id}
+                                    onClick={() => handleAssignTaskForce(tf.id)}
+                                    style={{
+                                        padding: 'var(--spacing-xs)',
+                                        marginBottom: 'var(--spacing-xs)',
+                                        background: 'var(--color-bg-tertiary)',
+                                        border: '1px solid var(--color-border-primary)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        cursor: 'pointer',
+                                        fontSize: 12,
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 600 }}>{tf.name}</div>
+                                    {tf.description && (
+                                        <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                                            {tf.description}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div style={{ display: 'grid', gap: 'var(--spacing-sm)' }}>
+                        {operationTaskForces.map((tf: any) => (
+                            editingTaskForce === tf.id ? (
+                                <TaskForceForm
+                                    key={tf.id}
+                                    taskForce={tf}
+                                    operationId={operation.id}
+                                    units={units}
+                                    onDone={() => setEditingTaskForce(null)}
+                                />
+                            ) : (
+                                <TaskForceCard
+                                    key={tf.id}
+                                    taskForce={tf}
+                                    units={units}
+                                    onEdit={() => setEditingTaskForce(tf.id)}
+                                    onDelete={() => onDeleteTaskForce(tf.id)}
+                                    onSelectUnit={onSelectUnit}
+                                />
+                            )
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {showTaskForceForm && (
+                <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                    <TaskForceForm
+                        operationId={operation.id}
+                        units={units}
+                        onDone={() => setShowTaskForceForm(false)}
+                    />
+                </div>
+            )}
+
+            {operationTaskForces.length === 0 && !showTaskForceForm && (
+                <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+                    {unassignedTaskForces.length > 0 && (
+                        <>
+                            <button
+                                onClick={() => setShowAssignMenu(!showAssignMenu)}
+                                style={{
+                                    width: '100%',
+                                    fontSize: 11,
+                                    padding: 'var(--spacing-sm)',
+                                    background: 'var(--color-bg-tertiary)',
+                                    border: '1px dashed var(--color-border-accent)',
+                                    marginBottom: 'var(--spacing-xs)'
+                                }}
+                            >
+                                Assign Existing Task Force
+                            </button>
+
+                            {showAssignMenu && (
+                                <div style={{
+                                    marginBottom: 'var(--spacing-sm)',
+                                    padding: 'var(--spacing-sm)',
+                                    background: 'var(--color-bg-elevated)',
+                                    border: '1px solid var(--color-border-accent)',
+                                    borderRadius: 'var(--radius-sm)'
+                                }}>
+                                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-xs)' }}>
+                                        Select a task force to assign:
+                                    </div>
+                                    {unassignedTaskForces.map((tf: any) => (
+                                        <div
+                                            key={tf.id}
+                                            onClick={() => handleAssignTaskForce(tf.id)}
+                                            style={{
+                                                padding: 'var(--spacing-xs)',
+                                                marginBottom: 'var(--spacing-xs)',
+                                                background: 'var(--color-bg-tertiary)',
+                                                border: '1px solid var(--color-border-primary)',
+                                                borderRadius: 'var(--radius-sm)',
+                                                cursor: 'pointer',
+                                                fontSize: 12,
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                                            }}
+                                        >
+                                            <div style={{ fontWeight: 600 }}>{tf.name}</div>
+                                            {tf.description && (
+                                                <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                                                    {tf.description}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    <button
+                        onClick={() => setShowTaskForceForm(true)}
+                        style={{
+                            width: '100%',
+                            fontSize: 11,
+                            padding: 'var(--spacing-sm)',
+                            background: 'var(--color-bg-tertiary)',
+                            border: '1px dashed var(--color-border-accent)'
+                        }}
+                    >
+                        + Add Task Force to Operation
+                    </button>
+                </div>
+            )}
+
             <div>
                 <h3 style={{ marginBottom: 'var(--spacing-md)' }}>Assigned Units ({assignedUnits.length})</h3>
                 {assignedUnits.length > 0 ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 'var(--spacing-sm)' }}>
-                        {assignedUnits.map((unit: any) => (
-                            <div
-                                key={unit.id}
-                                onClick={() => onSelectUnit(unit)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 'var(--spacing-sm)',
-                                    padding: 'var(--spacing-sm)',
-                                    background: 'var(--color-bg-tertiary)',
-                                    border: '1px solid var(--color-border-primary)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = 'var(--color-bg-elevated)';
-                                    e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-                                    e.currentTarget.style.borderColor = 'var(--color-border-primary)';
-                                }}
-                            >
-                                {unit.patch && (
-                                    <img
-                                        src={unit.patch}
-                                        alt={unit.name}
-                                        style={{
-                                            width: 32,
-                                            height: 32,
-                                            objectFit: 'contain',
+                        {assignedUnits.map((unit: any) => {
+                            const taskForce = taskForces?.find((tf: any) => tf.id === unit.taskForceId);
+                            return (
+                                <div
+                                    key={unit.id}
+                                    onClick={() => onSelectUnit(unit)}
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 'var(--spacing-xs)',
+                                        padding: 'var(--spacing-sm)',
+                                        background: 'var(--color-bg-tertiary)',
+                                        border: '1px solid var(--color-border-primary)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.background = 'var(--color-bg-elevated)';
+                                        e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.background = 'var(--color-bg-tertiary)';
+                                        e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                                        {unit.patch && (
+                                            <img
+                                                src={unit.patch}
+                                                alt={unit.name}
+                                                style={{
+                                                    width: 32,
+                                                    height: 32,
+                                                    objectFit: 'contain',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    border: '1px solid var(--color-border-accent)'
+                                                }}
+                                            />
+                                        )}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{
+                                                fontSize: 13,
+                                                fontWeight: 600,
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                {unit.name}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                                                {unit.echelon || unit.type}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {taskForce && (
+                                        <div style={{
+                                            fontSize: 10,
+                                            padding: '2px 6px',
+                                            background: 'var(--color-accent-primary)20',
+                                            color: 'var(--color-accent-primary)',
+                                            border: '1px solid var(--color-accent-primary)40',
                                             borderRadius: 'var(--radius-sm)',
-                                            border: '1px solid var(--color-border-accent)'
-                                        }}
-                                    />
-                                )}
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <div style={{
-                                        fontSize: 13,
-                                        fontWeight: 600,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
-                                    }}>
-                                        {unit.name}
-                                    </div>
-                                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                                        {unit.echelon || unit.type}
-                                    </div>
+                                            textAlign: 'center',
+                                            fontWeight: 600,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px'
+                                        }}>
+                                            TF: {taskForce.name}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <div style={{
@@ -395,6 +688,276 @@ function OperationForm({ operation, onDone }: any) {
                             onChange={e => setEndDate(e.target.value)}
                         />
                     </div>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-lg)', justifyContent: 'flex-end' }}>
+                <button onClick={onDone} style={{ background: 'var(--color-bg-primary)' }}>
+                    Cancel
+                </button>
+                <button
+                    onClick={handleSave}
+                    style={{
+                        background: 'var(--color-accent-primary)',
+                        borderColor: 'var(--color-accent-primary)',
+                        color: 'var(--color-bg-primary)'
+                    }}
+                >
+                    Save
+                </button>
+            </div>
+        </div>
+    );
+}
+
+
+function TaskForceCard({ taskForce, units, onEdit, onDelete, onSelectUnit }: any) {
+    const tfUnits = units?.filter((u: any) => u.taskForceId === taskForce.id) || [];
+
+    return (
+        <div style={{
+            padding: 'var(--spacing-md)',
+            background: 'var(--color-bg-elevated)',
+            border: '1px solid var(--color-border-accent)',
+            borderRadius: 'var(--radius-sm)'
+        }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-sm)' }}>
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 'var(--spacing-xs)' }}>
+                        {taskForce.name}
+                    </div>
+                    {taskForce.description && (
+                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                            {taskForce.description}
+                        </div>
+                    )}
+                </div>
+                <div style={{ display: 'flex', gap: 'var(--spacing-xs)' }}>
+                    <button onClick={onEdit} style={{ fontSize: 10, padding: '4px 8px' }}>Edit</button>
+                    <button
+                        onClick={onDelete}
+                        style={{
+                            fontSize: 10,
+                            padding: '4px 8px',
+                            background: 'var(--color-bg-primary)',
+                            borderColor: 'var(--color-border-accent)'
+                        }}
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+
+            {tfUnits.length > 0 && (
+                <div style={{
+                    marginTop: 'var(--spacing-sm)',
+                    paddingTop: 'var(--spacing-sm)',
+                    borderTop: '1px solid var(--color-border-primary)'
+                }}>
+                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 'var(--spacing-xs)' }}>
+                        Units ({tfUnits.length})
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--spacing-xs)' }}>
+                        {tfUnits.map((unit: any) => (
+                            <div
+                                key={unit.id}
+                                onClick={() => onSelectUnit(unit)}
+                                style={{
+                                    fontSize: 10,
+                                    padding: '3px 6px',
+                                    background: 'var(--color-bg-tertiary)',
+                                    border: '1px solid var(--color-border-primary)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                                }}
+                            >
+                                {unit.name}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function TaskForceForm({ taskForce, operationId, units, onDone }: any) {
+    const [name, setName] = useState(taskForce?.name || '');
+    const [description, setDescription] = useState(taskForce?.description || '');
+    const [selectedUnits, setSelectedUnits] = useState<string[]>(
+        taskForce ? (units?.filter((u: any) => u.taskForceId === taskForce?.id).map((u: any) => u.id) || []) : []
+    );
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const handleSave = async () => {
+        const tfId = taskForce?.id || crypto.randomUUID();
+
+        await db.taskForces.put({
+            id: tfId,
+            name,
+            operationId: operationId || taskForce?.operationId || undefined,
+            description: description || undefined,
+            createdAt: taskForce?.createdAt || Date.now()
+        });
+
+        // Update unit assignments
+        const allUnits = units || [];
+        for (const unit of allUnits) {
+            if (selectedUnits.includes(unit.id) && unit.taskForceId !== tfId) {
+                await db.units.update(unit.id, { taskForceId: tfId });
+            } else if (!selectedUnits.includes(unit.id) && unit.taskForceId === tfId) {
+                await db.units.update(unit.id, { taskForceId: undefined });
+            }
+        }
+
+        onDone();
+    };
+
+    const toggleUnit = (unitId: string) => {
+        setSelectedUnits(prev =>
+            prev.includes(unitId)
+                ? prev.filter(id => id !== unitId)
+                : [...prev, unitId]
+        );
+    };
+
+    const filteredUnits = units?.filter((u: any) =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ) || [];
+
+    const getParentUnit = (parentId: string) => {
+        return units?.find((u: any) => u.id === parentId);
+    };
+
+    return (
+        <div className="card">
+            <h2>{taskForce ? 'Edit Task Force' : 'New Task Force'}</h2>
+
+            <div style={{ display: 'grid', gap: 'var(--spacing-md)', marginTop: 'var(--spacing-lg)' }}>
+                <div>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                        Task Force Name
+                    </label>
+                    <input
+                        className="input"
+                        placeholder="e.g., Task Force Dagger"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                    />
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                        Description (Optional)
+                    </label>
+                    <textarea
+                        className="input"
+                        placeholder="Task force description..."
+                        value={description}
+                        onChange={e => setDescription(e.target.value)}
+                        rows={2}
+                        style={{ resize: 'vertical' }}
+                    />
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                        Assign Units
+                    </label>
+                    <input
+                        className="input"
+                        placeholder="Search units..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={{ marginBottom: 'var(--spacing-sm)' }}
+                    />
+                    <div style={{
+                        maxHeight: '300px',
+                        overflowY: 'auto',
+                        padding: 'var(--spacing-sm)',
+                        background: 'var(--color-bg-tertiary)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border-primary)'
+                    }}>
+                        {filteredUnits.length > 0 ? (
+                            filteredUnits.map((unit: any) => {
+                                const parentUnit = unit.parentId ? getParentUnit(unit.parentId) : null;
+                                return (
+                                    <label
+                                        key={unit.id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 'var(--spacing-sm)',
+                                            padding: 'var(--spacing-sm)',
+                                            cursor: 'pointer',
+                                            fontSize: 12,
+                                            borderRadius: 'var(--radius-sm)',
+                                            transition: 'background 0.2s ease',
+                                            marginBottom: 'var(--spacing-xs)'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'var(--color-bg-elevated)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'transparent';
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedUnits.includes(unit.id)}
+                                            onChange={() => toggleUnit(unit.id)}
+                                        />
+                                        {unit.patch && (
+                                            <img
+                                                src={unit.patch}
+                                                alt={unit.name}
+                                                style={{
+                                                    width: 24,
+                                                    height: 24,
+                                                    objectFit: 'contain',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    border: '1px solid var(--color-border-accent)'
+                                                }}
+                                            />
+                                        )}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontWeight: 600 }}>{unit.name}</div>
+                                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                                                {unit.echelon || unit.type}
+                                                {parentUnit && ` • Parent: ${parentUnit.name}`}
+                                            </div>
+                                        </div>
+                                    </label>
+                                );
+                            })
+                        ) : (
+                            <div style={{
+                                textAlign: 'center',
+                                padding: 'var(--spacing-md)',
+                                color: 'var(--color-text-muted)',
+                                fontSize: 11
+                            }}>
+                                No units found
+                            </div>
+                        )}
+                    </div>
+                    {selectedUnits.length > 0 && (
+                        <div style={{
+                            marginTop: 'var(--spacing-xs)',
+                            fontSize: 11,
+                            color: 'var(--color-text-muted)'
+                        }}>
+                            {selectedUnits.length} unit{selectedUnits.length !== 1 ? 's' : ''} selected
+                        </div>
+                    )}
                 </div>
             </div>
 

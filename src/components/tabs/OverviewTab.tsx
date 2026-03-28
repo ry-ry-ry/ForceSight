@@ -10,6 +10,9 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
     );
 
     const allUnits = useLiveQuery(() => db.units.toArray(), []);
+    const taskForces = useLiveQuery(() => db.taskForces.toArray(), []);
+
+    const unitTaskForce = taskForces?.find(tf => tf.id === unit.taskForceId);
 
     const active = deployments?.find(d => !d.endDate);
     const completed = deployments?.filter(d => d.endDate).sort((a, b) =>
@@ -121,6 +124,10 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
     const hierarchy = buildHierarchy();
     const subordinates = getSubordinates(unit.id);
 
+    const handleTaskForceChange = async (taskForceId: string) => {
+        await db.units.update(unit.id, { taskForceId: taskForceId || undefined });
+    };
+
     return (
         <div style={{ display: 'grid', gap: 'var(--spacing-xl)' }}>
 
@@ -133,6 +140,37 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                         <InfoRow label="Status" value={unit.status} />
                         <InfoRow label="Type" value={unit.type} />
                         {unit.echelon && <InfoRow label="Echelon" value={unit.echelon} />}
+                        {unit.country && <InfoRow label="Country" value={unit.country} />}
+
+                        <div style={{ marginTop: 'var(--spacing-sm)' }}>
+                            <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                Task Force Assignment
+                            </label>
+                            <select
+                                className="input"
+                                value={unit.taskForceId || ''}
+                                onChange={e => handleTaskForceChange(e.target.value)}
+                                style={{ width: '100%' }}
+                            >
+                                <option value="">No Task Force</option>
+                                {taskForces?.map(tf => (
+                                    <option key={tf.id} value={tf.id}>
+                                        {tf.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {unitTaskForce && (
+                                <div style={{
+                                    marginTop: 'var(--spacing-xs)',
+                                    fontSize: 11,
+                                    color: 'var(--color-accent-primary)'
+                                }}>
+                                    Currently assigned to: {unitTaskForce.name}
+                                    {unitTaskForce.description && ` - ${unitTaskForce.description}`}
+                                </div>
+                            )}
+                        </div>
+
                         <div style={{
                             marginTop: 'var(--spacing-sm)',
                             padding: 'var(--spacing-md)',
