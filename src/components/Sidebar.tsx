@@ -5,56 +5,39 @@ import type { Unit } from '../db';
 
 export default function Sidebar({ select }: any) {
     const [search, setSearch] = useState('');
-    const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [sortBy, setSortBy] = useState<'name' | 'status' | 'echelon' | 'created'>('name');
-    const units = useLiveQuery(() => db.units.toArray(), []);
+    const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['Ground', 'Air', 'SOF', 'Support']));
+    const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
+    const [showFilters, setShowFilters] = useState(false);
 
-    const toggleExpand = (id: string) => {
-        const newExpanded = new Set(expanded);
+    // Filters
+    const [filterCountry, setFilterCountry] = useState<string>('');
+    const [filterEchelon, setFilterEchelon] = useState<string>('');
+    const [filterStatus, setFilterStatus] = useState<string>('');
+    const [filterOperation, setFilterOperation] = useState<string>('');
+
+    const units = useLiveQuery(() => db.units.toArray(), []);
+    const deployments = useLiveQuery(() => db.deployments.toArray(), []);
+    const operations = useLiveQuery(() => db.operations.toArray(), []);
+
+    const toggleType = (type: string) => {
+        const newExpanded = new Set(expandedTypes);
+        if (newExpanded.has(type)) {
+            newExpanded.delete(type);
+        } else {
+            newExpanded.add(type);
+        }
+        setExpandedTypes(newExpanded);
+    };
+
+    const toggleUnit = (id: string) => {
+        const newExpanded = new Set(expandedUnits);
         if (newExpanded.has(id)) {
             newExpanded.delete(id);
         } else {
             newExpanded.add(id);
         }
-        setExpanded(newExpanded);
-    };
-
-    const buildTree = (units: Unit[]) => {
-        // Sort units based on selected sort option
-        let sortedUnits = [...units];
-        switch (sortBy) {
-            case 'name':
-                sortedUnits.sort((a, b) => a.name.localeCompare(b.name));
-                break;
-            case 'status':
-                sortedUnits.sort((a, b) => a.status.localeCompare(b.status));
-                break;
-            case 'echelon':
-                const echelonOrder = ['Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company'];
-                sortedUnits.sort((a, b) => {
-                    const aIndex = echelonOrder.indexOf(a.echelon || '');
-                    const bIndex = echelonOrder.indexOf(b.echelon || '');
-                    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-                });
-                break;
-            case 'created':
-                sortedUnits.sort((a, b) => b.createdAt - a.createdAt);
-                break;
-        }
-
-        const topLevel = sortedUnits.filter(u => !u.parentId);
-        const childMap = new Map<string, Unit[]>();
-
-        sortedUnits.forEach(u => {
-            if (u.parentId) {
-                if (!childMap.has(u.parentId)) {
-                    childMap.set(u.parentId, []);
-                }
-                childMap.get(u.parentId)!.push(u);
-            }
-        });
-
-        return { topLevel, childMap };
+        setExpandedUnits(newExpanded);
     };
 
     const getStatusColor = (status: string) => {
@@ -67,11 +50,90 @@ export default function Sidebar({ select }: any) {
         return colors[status] || 'var(--color-text-muted)';
     };
 
-    const renderUnit = (u: Unit, depth: number, childMap: Map<string, Unit[]>) => {
-        const color = getStatusColor(u.status);
-        const children = childMap.get(u.id) || [];
+    const applyFilters = (units: Unit[]) => {
+        return units.filter(u => {
+            // Search filter
+            if (search && !u.name.toLowerCase().includes(search.toLowerCase())) {
+                return false;
+            }
+
+            // Country filter
+            if (filterCountry && u.country !== filterCountry) {
+                return false;
+            }
+
+            // Echelon filter
+            if (filterEchelon && u.echelon !== filterEchelon) {
+                return false;
+            }
+
+            // Status filter
+            if (filterStatus && u.status !== filterStatus) {
+                return false;
+            }
+
+            // Operation filter
+            if (filterOperation) {
+                const unitDeployment = deployments?.find(d => d.unitId === u.id && d.operationId === filterOperation);
+                if (!unitDeployment) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    };
+
+    const sortUnits = (units: Unit[]) => {
+        const sorted = [...units];
+        switch (sortBy) {
+            case 'name':
+                sorted.sort((a, b) => a.name.localeCompare(b.name));
+                break;
+            case 'status':
+                sorted.sort((a, b) => a.status.localeCompare(b.status));
+                break;
+            case 'echelon':
+                const echelonOrder = ['Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company'];
+                sorted.sort((a, b) => {
+                    const aIndex = echelonOrder.indexOf(a.echelon || '');
+                    const bIndex = echelonOrder.indexOf(b.echelon || '');
+                    return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+                });
+                break;
+            case 'created':
+                sorted.sort((a, b) => b.createdAt - a.createdAt);
+                break;
+        }
+        return sorted;
+    };
+
+    const groupByType = (units: Unit[]) => {
+        const groups: Record<string, Unit[]> = {
+            Ground: [],
+            Air: [],
+            SOF: [],
+            Support: []
+        };
+
+        // Only include top-level units (no parent)
+        units.forEach(u => {
+            if (groups[u.type] && !u.parentId) {
+                groups[u.type].push(u);
+            }
+        });
+
+        return groups;
+    };
+
+    const getChildren = (parentId: string, allUnits: Unit[]) => {
+        return allUnits.filter(u => u.parentId === parentId);
+    };
+
+    const renderUnit = (u: Unit, depth: number, allUnits: Unit[]): React.ReactElement => {
+        const children = getChildren(u.id, allUnits);
         const hasChildren = children.length > 0;
-        const isExpanded = expanded.has(u.id);
+        const isExpanded = expandedUnits.has(u.id);
 
         return (
             <div key={u.id}>
@@ -79,7 +141,7 @@ export default function Sidebar({ select }: any) {
                     onClick={() => select(u)}
                     style={{
                         padding: 'var(--spacing-md)',
-                        paddingLeft: `calc(var(--spacing-md) + ${depth * 20}px)`,
+                        paddingLeft: `calc(var(--spacing-xl) + ${depth * 20}px)`,
                         borderBottom: '1px solid var(--color-border-primary)',
                         cursor: 'pointer',
                         display: 'flex',
@@ -111,7 +173,7 @@ export default function Sidebar({ select }: any) {
                         <span
                             onClick={(e) => {
                                 e.stopPropagation();
-                                toggleExpand(u.id);
+                                toggleUnit(u.id);
                             }}
                             style={{
                                 cursor: 'pointer',
@@ -119,7 +181,8 @@ export default function Sidebar({ select }: any) {
                                 width: 16,
                                 color: 'var(--color-accent-primary)',
                                 transition: 'transform 0.2s ease',
-                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                fontSize: 12
                             }}
                         >
                             ▶
@@ -151,24 +214,22 @@ export default function Sidebar({ select }: any) {
                         }}>
                             {u.name}
                         </div>
-                        <div style={{
-                            fontSize: 11,
-                            color: 'var(--color-text-muted)',
-                            marginTop: 2
-                        }}>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
                             {u.echelon || u.type}
+                            {u.country && ` • ${u.country}`}
                         </div>
                     </div>
 
                     <div
                         className="status-indicator"
                         style={{
-                            background: color,
+                            background: getStatusColor(u.status),
                             flexShrink: 0
                         }}
                     />
                 </div>
-                {hasChildren && isExpanded && children.map(child => renderUnit(child, depth + 1, childMap))}
+
+                {hasChildren && isExpanded && children.map(child => renderUnit(child, depth + 1, allUnits))}
             </div>
         );
     };
@@ -185,8 +246,15 @@ export default function Sidebar({ select }: any) {
         </div>
     );
 
-    const filtered = units.filter(u => u.name.toLowerCase().includes(search.toLowerCase()));
-    const { topLevel, childMap } = buildTree(filtered);
+    const filtered = applyFilters(units);
+    const sorted = sortUnits(filtered);
+    const grouped = groupByType(sorted);
+
+    const activeFiltersCount = [filterCountry, filterEchelon, filterStatus, filterOperation].filter(Boolean).length;
+
+    // Get unique values for filters
+    const countries = Array.from(new Set(units.map(u => u.country).filter(Boolean))).sort();
+    const echelons = Array.from(new Set(units.map(u => u.echelon).filter(Boolean))).sort();
 
     return (
         <div className="sidebar">
@@ -202,6 +270,7 @@ export default function Sidebar({ select }: any) {
                 }}>
                     UNIT ROSTER
                 </h3>
+
                 <input
                     className="input"
                     placeholder="Search units..."
@@ -209,21 +278,174 @@ export default function Sidebar({ select }: any) {
                     onChange={e => setSearch(e.target.value)}
                     style={{ marginBottom: 'var(--spacing-sm)' }}
                 />
+
                 <select
                     className="input"
                     value={sortBy}
                     onChange={e => setSortBy(e.target.value as any)}
-                    style={{ width: '100%' }}
+                    style={{ width: '100%', marginBottom: 'var(--spacing-sm)' }}
                 >
                     <option value="name">Sort: Alphabetical</option>
                     <option value="status">Sort: Status</option>
                     <option value="echelon">Sort: Echelon</option>
                     <option value="created">Sort: Recently Created</option>
                 </select>
+
+                <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    style={{
+                        width: '100%',
+                        fontSize: 11,
+                        background: showFilters ? 'var(--color-accent-primary)' : 'var(--color-bg-elevated)',
+                        color: showFilters ? 'var(--color-bg-primary)' : 'var(--color-text-primary)',
+                        borderColor: showFilters ? 'var(--color-accent-primary)' : 'var(--color-border-accent)'
+                    }}
+                >
+                    {showFilters ? '▼' : '▶'} Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+                </button>
+
+                {showFilters && (
+                    <div style={{
+                        marginTop: 'var(--spacing-sm)',
+                        padding: 'var(--spacing-sm)',
+                        background: 'var(--color-bg-primary)',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'grid',
+                        gap: 'var(--spacing-xs)'
+                    }}>
+                        <select
+                            className="input"
+                            value={filterCountry}
+                            onChange={e => setFilterCountry(e.target.value)}
+                            style={{ width: '100%', fontSize: 11 }}
+                        >
+                            <option value="">All Countries</option>
+                            {countries.map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            className="input"
+                            value={filterEchelon}
+                            onChange={e => setFilterEchelon(e.target.value)}
+                            style={{ width: '100%', fontSize: 11 }}
+                        >
+                            <option value="">All Echelons</option>
+                            {echelons.map(e => (
+                                <option key={e} value={e}>{e}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            className="input"
+                            value={filterStatus}
+                            onChange={e => setFilterStatus(e.target.value)}
+                            style={{ width: '100%', fontSize: 11 }}
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="Deployed">Deployed</option>
+                            <option value="Standby">Standby</option>
+                            <option value="Training">Training</option>
+                            <option value="Reset">Reset</option>
+                        </select>
+
+                        <select
+                            className="input"
+                            value={filterOperation}
+                            onChange={e => setFilterOperation(e.target.value)}
+                            style={{ width: '100%', fontSize: 11 }}
+                        >
+                            <option value="">All Operations</option>
+                            {operations?.map(op => (
+                                <option key={op.id} value={op.id}>{op.name}</option>
+                            ))}
+                        </select>
+
+                        {activeFiltersCount > 0 && (
+                            <button
+                                onClick={() => {
+                                    setFilterCountry('');
+                                    setFilterEchelon('');
+                                    setFilterStatus('');
+                                    setFilterOperation('');
+                                }}
+                                style={{
+                                    fontSize: 10,
+                                    padding: '4px 8px',
+                                    background: 'var(--color-bg-elevated)'
+                                }}
+                            >
+                                Clear Filters
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                <div style={{
+                    marginTop: 'var(--spacing-sm)',
+                    fontSize: 11,
+                    color: 'var(--color-text-muted)',
+                    textAlign: 'center'
+                }}>
+                    {filtered.length} of {units.length} units
+                </div>
             </div>
 
             <div>
-                {topLevel.length === 0 ? (
+                {Object.entries(grouped).map(([type, typeUnits]) => (
+                    <div key={type}>
+                        <div
+                            onClick={() => toggleType(type)}
+                            style={{
+                                padding: 'var(--spacing-sm) var(--spacing-md)',
+                                background: 'var(--color-bg-elevated)',
+                                borderBottom: '1px solid var(--color-border-primary)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                transition: 'all 0.2s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--color-bg-tertiary)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'var(--color-bg-elevated)';
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                                <span style={{
+                                    color: 'var(--color-accent-primary)',
+                                    fontSize: 12,
+                                    transition: 'transform 0.2s ease',
+                                    transform: expandedTypes.has(type) ? 'rotate(90deg)' : 'rotate(0deg)'
+                                }}>
+                                    ▶
+                                </span>
+                                <span style={{
+                                    fontWeight: 600,
+                                    fontSize: 13,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    {type}
+                                </span>
+                            </div>
+                            <span style={{
+                                fontSize: 11,
+                                color: 'var(--color-text-muted)',
+                                fontFamily: 'JetBrains Mono'
+                            }}>
+                                {typeUnits.length}
+                            </span>
+                        </div>
+
+                        {expandedTypes.has(type) && typeUnits.map(u => renderUnit(u, 0, filtered))}
+                    </div>
+                ))}
+
+                {filtered.length === 0 && (
                     <div style={{
                         padding: 'var(--spacing-xl)',
                         textAlign: 'center',
@@ -232,8 +454,6 @@ export default function Sidebar({ select }: any) {
                     }}>
                         No units found
                     </div>
-                ) : (
-                    topLevel.map(u => renderUnit(u, 0, childMap))
                 )}
             </div>
         </div>

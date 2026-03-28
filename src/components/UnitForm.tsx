@@ -17,6 +17,7 @@ export default function UnitForm({ unit, onDone }: any) {
     const [name, setName] = useState(unit?.name || '');
     const [type, setType] = useState(unit?.type || 'Ground');
     const [echelon, setEchelon] = useState(unit?.echelon || 'Battalion');
+    const [country, setCountry] = useState(unit?.country || '');
     const [status, setStatus] = useState(unit?.status || 'Standby');
     const [rtb, setRtb] = useState(unit?.lastRTBDate || '');
     const [parentId, setParentId] = useState(unit?.parentId || '');
@@ -74,6 +75,7 @@ export default function UnitForm({ unit, onDone }: any) {
             name,
             type,
             echelon,
+            country: country || undefined,
             status,
             parentId: parentId || undefined,
             patch: patch || undefined,
@@ -144,6 +146,18 @@ export default function UnitForm({ unit, onDone }: any) {
                             <option>Division</option>
                         </select>
                     </div>
+                </div>
+
+                <div>
+                    <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                        Country (Optional)
+                    </label>
+                    <input
+                        className="input"
+                        placeholder="e.g., United States, United Kingdom"
+                        value={country}
+                        onChange={e => setCountry(e.target.value)}
+                    />
                 </div>
 
                 <div>

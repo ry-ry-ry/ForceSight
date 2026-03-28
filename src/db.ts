@@ -6,6 +6,7 @@ export interface Unit {
     name: string;
     type: string;
     echelon?: string;
+    country?: string;
     status: string;
     parentId?: string;
     lastRTBDate?: string;
@@ -69,6 +70,12 @@ class DB extends Dexie {
         });
         this.version(4).stores({
             units: 'id, name, parentId, echelon',
+            deployments: 'id, unitId, operationId',
+            operations: 'id, name, status, startDate',
+            missions: 'id, unitId, operationId'
+        });
+        this.version(5).stores({
+            units: 'id, name, parentId, echelon, country',
             deployments: 'id, unitId, operationId',
             operations: 'id, name, status, startDate',
             missions: 'id, unitId, operationId'
