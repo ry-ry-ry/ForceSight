@@ -1,0 +1,139 @@
+export const today = () => new Date().toISOString().slice(0, 10);
+
+export const daysBetween = (a: string, b: string) =>
+    Math.floor((+new Date(b) - +new Date(a)) / 86400000);
+
+export interface ReadinessStatus {
+    level: 'high' | 'medium' | 'low';
+    color: string;
+    label: string;
+    ratio: number;
+}
+
+export function calculateReadiness(
+    lastDeploymentLength: number | null,
+    restPeriod: number | null
+): ReadinessStatus {
+    // If no deployment history, assume high readiness
+    if (!lastDeploymentLength || lastDeploymentLength === 0) {
+        return {
+            level: 'high',
+            color: 'var(--color-status-standby)',
+            label: 'High',
+            ratio: 1
+        };
+    }
+
+    // If no rest period (currently deployed), readiness is low
+    if (!restPeriod || restPeriod === 0) {
+        return {
+            level: 'low',
+            color: 'var(--color-status-deployed)',
+            label: 'Low',
+            ratio: 0
+        };
+    }
+
+    // Calculate rest-to-deployment ratio
+    const ratio = restPeriod / lastDeploymentLength;
+
+    // High readiness: rest period >= deployment length (1:1 or better)
+    if (ratio >= 1.0) {
+        return {
+            level: 'high',
+            color: 'var(--color-status-standby)',
+            label: 'High',
+            ratio
+        };
+    }
+
+    // Medium readiness: rest period is 50-100% of deployment length
+    if (ratio >= 0.5) {
+        return {
+            level: 'medium',
+            color: 'var(--color-status-training)',
+            label: 'Medium',
+            ratio
+        };
+    }
+
+    // Low readiness: rest period < 50% of deployment length
+    return {
+        level: 'low',
+        color: 'var(--color-status-deployed)',
+        label: 'Low',
+        ratio
+    };
+}
+
+export interface RotationStatus {
+    status: 'overdue' | 'urgent' | 'soon' | 'ok';
+    daysDeployed: number;
+    daysUntilRotation: number;
+    rotationThreshold: number;
+    color: string;
+    priority: number;
+}
+
+export function calculateRotationStatus(
+    unitType: string,
+    deploymentStartDate: string
+): RotationStatus {
+    // Rotation thresholds in days
+    const thresholds: Record<string, number> = {
+        'SOF': 180,      // 6 months
+        'Air': 180,      // 6 months
+        'Ground': 270,   // 9 months
+        'Support': 270   // 9 months (default)
+    };
+
+    const rotationThreshold = thresholds[unitType] || 270;
+    const daysDeployed = daysBetween(deploymentStartDate, today());
+    const daysUntilRotation = rotationThreshold - daysDeployed;
+
+    // Overdue: past rotation threshold
+    if (daysUntilRotation <= 0) {
+        return {
+            status: 'overdue',
+            daysDeployed,
+            daysUntilRotation,
+            rotationThreshold,
+            color: 'var(--color-status-deployed)',
+            priority: 1
+        };
+    }
+
+    // Urgent: within 30 days of rotation
+    if (daysUntilRotation <= 30) {
+        return {
+            status: 'urgent',
+            daysDeployed,
+            daysUntilRotation,
+            rotationThreshold,
+            color: 'var(--color-status-training)',
+            priority: 2
+        };
+    }
+
+    // Soon: within 60 days of rotation
+    if (daysUntilRotation <= 60) {
+        return {
+            status: 'soon',
+            daysDeployed,
+            daysUntilRotation,
+            rotationThreshold,
+            color: 'var(--color-accent-secondary)',
+            priority: 3
+        };
+    }
+
+    // OK: more than 60 days until rotation
+    return {
+        status: 'ok',
+        daysDeployed,
+        daysUntilRotation,
+        rotationThreshold,
+        color: 'var(--color-status-standby)',
+        priority: 4
+    };
+}
