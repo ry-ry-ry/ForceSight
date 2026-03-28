@@ -22,6 +22,8 @@ export default function UnitForm({ unit, onDone }: any) {
     const [rtb, setRtb] = useState(unit?.lastRTBDate || '');
     const [parentId, setParentId] = useState(unit?.parentId || '');
     const [patch, setPatch] = useState(unit?.patch || '');
+    const [parentSearch, setParentSearch] = useState('');
+    const [showParentDropdown, setShowParentDropdown] = useState(false);
 
     const allUnits = useLiveQuery(() => db.units.toArray(), []);
 
@@ -30,6 +32,13 @@ export default function UnitForm({ unit, onDone }: any) {
             setEchelon(inferEchelon(name));
         }
     }, [name, unit]);
+
+    const filteredParents = allUnits?.filter(u =>
+        u.id !== unit?.id &&
+        u.name.toLowerCase().includes(parentSearch.toLowerCase())
+    ) || [];
+
+    const selectedParent = allUnits?.find(u => u.id === parentId);
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -181,21 +190,137 @@ export default function UnitForm({ unit, onDone }: any) {
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
                         Parent Unit
                     </label>
-                    <select
-                        className="input"
-                        value={parentId}
-                        onChange={e => setParentId(e.target.value)}
-                        style={{ width: '100%' }}
-                    >
-                        <option value="">No Parent (Top Level)</option>
-                        {allUnits
-                            ?.filter(u => u.id !== unit?.id)
-                            .map(u => (
-                                <option key={u.id} value={u.id}>
-                                    {u.name}
-                                </option>
-                            ))}
-                    </select>
+                    <div style={{ position: 'relative' }}>
+                        {selectedParent ? (
+                            <div
+                                onClick={() => {
+                                    setParentId('');
+                                    setParentSearch('');
+                                }}
+                                style={{
+                                    padding: 'var(--spacing-sm)',
+                                    background: 'var(--color-bg-tertiary)',
+                                    border: '1px solid var(--color-border-accent)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 'var(--spacing-sm)'
+                                }}
+                            >
+                                {selectedParent.patch && (
+                                    <img
+                                        src={selectedParent.patch}
+                                        alt={selectedParent.name}
+                                        style={{
+                                            width: 24,
+                                            height: 24,
+                                            objectFit: 'contain',
+                                            borderRadius: 'var(--radius-sm)',
+                                            border: '1px solid var(--color-border-accent)'
+                                        }}
+                                    />
+                                )}
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 13 }}>{selectedParent.name}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                                        {selectedParent.echelon || selectedParent.type}
+                                    </div>
+                                </div>
+                                <span style={{ color: 'var(--color-text-muted)', fontSize: 18 }}>×</span>
+                            </div>
+                        ) : (
+                            <>
+                                <input
+                                    className="input"
+                                    placeholder="Search for parent unit..."
+                                    value={parentSearch}
+                                    onChange={e => {
+                                        setParentSearch(e.target.value);
+                                        setShowParentDropdown(true);
+                                    }}
+                                    onFocus={() => setShowParentDropdown(true)}
+                                    style={{ width: '100%' }}
+                                />
+                                {showParentDropdown && filteredParents.length > 0 && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        maxHeight: '250px',
+                                        overflowY: 'auto',
+                                        background: 'var(--color-bg-secondary)',
+                                        border: '1px solid var(--color-border-accent)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        zIndex: 1000,
+                                        marginTop: 'var(--spacing-xs)'
+                                    }}>
+                                        <div
+                                            onClick={() => {
+                                                setParentId('');
+                                                setShowParentDropdown(false);
+                                                setParentSearch('');
+                                            }}
+                                            style={{
+                                                padding: 'var(--spacing-sm)',
+                                                cursor: 'pointer',
+                                                borderBottom: '1px solid var(--color-border-primary)',
+                                                fontSize: 12,
+                                                color: 'var(--color-text-muted)'
+                                            }}
+                                        >
+                                            No Parent (Top Level)
+                                        </div>
+                                        {filteredParents.map(u => (
+                                            <div
+                                                key={u.id}
+                                                onClick={() => {
+                                                    setParentId(u.id);
+                                                    setShowParentDropdown(false);
+                                                    setParentSearch('');
+                                                }}
+                                                style={{
+                                                    padding: 'var(--spacing-sm)',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 'var(--spacing-sm)',
+                                                    transition: 'background 0.2s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = 'var(--color-bg-tertiary)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = 'transparent';
+                                                }}
+                                            >
+                                                {u.patch && (
+                                                    <img
+                                                        src={u.patch}
+                                                        alt={u.name}
+                                                        style={{
+                                                            width: 24,
+                                                            height: 24,
+                                                            objectFit: 'contain',
+                                                            borderRadius: 'var(--radius-sm)',
+                                                            border: '1px solid var(--color-border-accent)'
+                                                        }}
+                                                    />
+                                                )}
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: 12 }}>{u.name}</div>
+                                                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                                                        {u.echelon || u.type}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
 
                 <div>

@@ -57,7 +57,9 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
 
     const getSubordinates = (unitId: string): Unit[] => {
         if (!allUnits) return [];
-        return allUnits.filter(u => u.parentId === unitId);
+        return allUnits
+            .filter(u => u.parentId === unitId)
+            .sort((a, b) => a.name.localeCompare(b.name));
     };
 
     const renderSubordinates = (parentUnit: Unit, depth: number = 0): React.ReactElement[] => {
