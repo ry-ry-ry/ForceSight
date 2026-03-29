@@ -2,6 +2,8 @@ ForceSight is a program for managing unit deployments and military operations, a
 
 There is a private program built for private use, so it doesn't come with any data.
 
+Vibe coded. Use at your own risk.
+
 Previews:
 
 **Unit Overview**
