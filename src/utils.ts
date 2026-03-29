@@ -3,6 +3,18 @@ export const today = () => new Date().toISOString().slice(0, 10);
 export const daysBetween = (a: string, b: string) =>
     Math.floor((+new Date(b) - +new Date(a)) / 86400000);
 
+/**
+ * Escape a string for safe interpolation into XML/SVG/HTML markup.
+ * Prevents injection via unit names, descriptions, or other user input.
+ */
+export const escapeXml = (str: string): string =>
+    str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
 export interface ReadinessStatus {
     level: 'high' | 'medium' | 'low';
     color: string;

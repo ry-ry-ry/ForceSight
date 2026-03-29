@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { daysBetween, today, calculateReadiness } from '../../utils';
+import { daysBetween, today, calculateReadiness, escapeXml } from '../../utils';
 import type { Unit } from '../../db';
 import React, { useState } from 'react';
 
@@ -449,7 +449,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                 }
 
                 if (node.unit.patch) {
-                    svg += `<image href="${node.unit.patch}" x="${cx - badgeSize / 2}" y="${topY}" width="${badgeSize}" height="${badgeSize}" preserveAspectRatio="xMidYMid meet"/>`;
+                    svg += `<image href="${escapeXml(node.unit.patch)}" x="${cx - badgeSize / 2}" y="${topY}" width="${badgeSize}" height="${badgeSize}" preserveAspectRatio="xMidYMid meet"/>`;
                 } else {
                     // Placeholder circle — scales with badge size
                     const r = badgeSize / 2 - 2;
@@ -463,7 +463,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                 const lines = wrapText(node.unit.name, NODE_W, fontSize);
                 const nameStartY = topY + badgeSize + TEXT_PAD + fontSize;
                 lines.forEach((line, i) => {
-                    svg += `<text x="${cx}" y="${nameStartY + i * LINE_H}" text-anchor="middle" fill="#f8fafc" font-family="system-ui" font-size="${fontSize}" font-weight="600">${line}</text>`;
+                    svg += `<text x="${cx}" y="${nameStartY + i * LINE_H}" text-anchor="middle" fill="#f8fafc" font-family="system-ui" font-size="${fontSize}" font-weight="600">${escapeXml(line)}</text>`;
                 });
 
             } else {
@@ -492,7 +492,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                 const badgeX = cx - badgeSize / 2;
                 const badgeY = boxY + BADGE_PAD;
                 if (node.unit.patch) {
-                    svg += `<image href="${node.unit.patch}" x="${badgeX}" y="${badgeY}" width="${badgeSize}" height="${badgeSize}" preserveAspectRatio="xMidYMid meet"/>`;
+                    svg += `<image href="${escapeXml(node.unit.patch)}" x="${badgeX}" y="${badgeY}" width="${badgeSize}" height="${badgeSize}" preserveAspectRatio="xMidYMid meet"/>`;
                 } else {
                     svg += `<circle cx="${cx}" cy="${badgeY + badgeSize / 2}" r="${badgeSize / 2 - 2}" fill="#1a1f3a" stroke="${nodeBorder}" stroke-width="1"/>`;
                 }
@@ -500,7 +500,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                 // Wrapped name lines
                 const nameStartY = badgeY + badgeSize + TEXT_PAD + fontSize;
                 lines.forEach((line, i) => {
-                    svg += `<text x="${cx}" y="${nameStartY + i * LINE_H}" text-anchor="middle" fill="#f8fafc" font-family="system-ui" font-size="${fontSize}" font-weight="600">${line}</text>`;
+                    svg += `<text x="${cx}" y="${nameStartY + i * LINE_H}" text-anchor="middle" fill="#f8fafc" font-family="system-ui" font-size="${fontSize}" font-weight="600">${escapeXml(line)}</text>`;
                 });
             }
 
@@ -517,9 +517,10 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
         const svgContent = generateHierarchySVG(settings);
         if (!svgContent) return '';
 
-        const unitName = unit.name;
-        const bg = settings.bgColor;
-        const conn = settings.connectionColor;
+        const unitName = escapeXml(unit.name);
+        const sanitizeColor = (c: string) => /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : '#000000';
+        const bg = sanitizeColor(settings.bgColor);
+        const conn = sanitizeColor(settings.connectionColor);
 
         return `<!DOCTYPE html>
 <html lang="en">
