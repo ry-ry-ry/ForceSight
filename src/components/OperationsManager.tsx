@@ -105,8 +105,6 @@ export default function OperationsManager({ onSelectUnit }: any) {
                             onEdit={() => handleEdit(op.id)}
                             onDelete={() => handleDelete(op.id)}
                             onSelectUnit={onSelectUnit}
-                            onCreateTaskForce={() => handleCreateTaskForce(op.id)}
-                            onEditTaskForce={handleEditTaskForce}
                             onDeleteTaskForce={handleDeleteTaskForce}
                             delay={index * 0.1}
                         />
@@ -182,7 +180,7 @@ export default function OperationsManager({ onSelectUnit }: any) {
     );
 }
 
-function OperationCard({ operation, units, deployments, taskForces, onEdit, onDelete, onSelectUnit, onCreateTaskForce, onEditTaskForce, onDeleteTaskForce, delay }: any) {
+function OperationCard({ operation, units, deployments, taskForces, onEdit, onDelete, onSelectUnit, onDeleteTaskForce, delay }: any) {
     const [showTaskForceForm, setShowTaskForceForm] = useState(false);
     const [editingTaskForce, setEditingTaskForce] = useState<string | null>(null);
     const [showAssignMenu, setShowAssignMenu] = useState(false);

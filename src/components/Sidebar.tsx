@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import type { Unit } from '../db';
 
 export default function Sidebar({ select }: any) {
@@ -52,6 +52,11 @@ export default function Sidebar({ select }: any) {
 
     const applyFilters = (units: Unit[]) => {
         return units.filter(u => {
+            // Hide Command-type units from sidebar
+            if (u.type === 'Command') {
+                return false;
+            }
+
             // Search filter
             if (search && !u.name.toLowerCase().includes(search.toLowerCase())) {
                 return false;
@@ -94,7 +99,7 @@ export default function Sidebar({ select }: any) {
                 sorted.sort((a, b) => a.status.localeCompare(b.status));
                 break;
             case 'echelon':
-                const echelonOrder = ['Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company'];
+                const echelonOrder = ['Command', 'Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company'];
                 sorted.sort((a, b) => {
                     const aIndex = echelonOrder.indexOf(a.echelon || '');
                     const bIndex = echelonOrder.indexOf(b.echelon || '');
@@ -108,7 +113,7 @@ export default function Sidebar({ select }: any) {
         return sorted;
     };
 
-    const groupByType = (units: Unit[]) => {
+    const groupByType = (unitsToGroup: Unit[]) => {
         const groups: Record<string, Unit[]> = {
             Ground: [],
             Air: [],
@@ -116,10 +121,22 @@ export default function Sidebar({ select }: any) {
             Support: []
         };
 
-        // Only include top-level units (no parent)
-        units.forEach(u => {
-            if (groups[u.type] && !u.parentId) {
-                groups[u.type].push(u);
+        // Include units that are either:
+        // 1. Top-level (no parent), OR
+        // 2. Direct children of Command-type units
+        // Exclude Command-type units themselves
+        // Use all units (not filtered units) to find parent Commands
+        unitsToGroup.forEach(u => {
+            if (u.type === 'Command') return; // Skip Commands
+
+            const isTopLevel = !u.parentId;
+            const parentUnit = u.parentId ? units?.find((p: Unit) => p.id === u.parentId) : null;
+            const isChildOfCommand = parentUnit?.type === 'Command';
+
+            if (isTopLevel || isChildOfCommand) {
+                if (groups[u.type]) {
+                    groups[u.type].push(u);
+                }
             }
         });
 
@@ -127,13 +144,23 @@ export default function Sidebar({ select }: any) {
     };
 
     const getChildren = (parentId: string, allUnits: Unit[]) => {
-        return allUnits.filter(u => u.parentId === parentId);
+        return allUnits
+            .filter(u => u.parentId === parentId && u.type !== 'Command')
+            .sort((a, b) => a.name.localeCompare(b.name));
+    };
+
+    const getParentCommand = (unit: Unit) => {
+        if (!unit.parentId) return null;
+        const parent = units?.find((u: Unit) => u.id === unit.parentId);
+        if (parent?.type === 'Command') return parent;
+        return null;
     };
 
     const renderUnit = (u: Unit, depth: number, allUnits: Unit[]): React.ReactElement => {
         const children = getChildren(u.id, allUnits);
         const hasChildren = children.length > 0;
         const isExpanded = expandedUnits.has(u.id);
+        const parentCommand = getParentCommand(u);
 
         return (
             <div key={u.id}>
@@ -218,6 +245,15 @@ export default function Sidebar({ select }: any) {
                             {u.echelon || u.type}
                             {u.country && ` • ${u.country}`}
                         </div>
+                        {parentCommand && (
+                            <div style={{
+                                fontSize: 10,
+                                color: 'var(--color-accent-primary)',
+                                marginTop: 2
+                            }}>
+                                {parentCommand.name}
+                            </div>
+                        )}
                     </div>
 
                     <div
@@ -388,7 +424,7 @@ export default function Sidebar({ select }: any) {
                     color: 'var(--color-text-muted)',
                     textAlign: 'center'
                 }}>
-                    {filtered.length} of {units.length} units
+                    {filtered.length} of {units.filter(u => u.type !== 'Command').length} units
                 </div>
             </div>
 

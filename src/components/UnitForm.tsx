@@ -4,6 +4,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 
 function inferEchelon(name: string): string {
     const lower = name.toLowerCase();
+    if (lower.includes('command')) return 'Command';
     if (lower.includes('corps')) return 'Corps';
     if (lower.includes('division') || lower.includes('div')) return 'Division';
     if (lower.includes('brigade') || lower.includes('bde')) return 'Brigade';
@@ -131,6 +132,7 @@ export default function UnitForm({ unit, onDone }: any) {
                             onChange={e => setType(e.target.value)}
                             style={{ width: '100%' }}
                         >
+                            <option>Command</option>
                             <option>Ground</option>
                             <option>Air</option>
                             <option>SOF</option>
@@ -155,6 +157,7 @@ export default function UnitForm({ unit, onDone }: any) {
                             <option>Brigade</option>
                             <option>Division</option>
                             <option>Corps</option>
+                            <option>Command</option>
                         </select>
                     </div>
                 </div>
