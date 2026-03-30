@@ -32,7 +32,11 @@ export default function Dashboard({ onSelectUnit }: any) {
             deployment: activeDeployment,
             rotationStatus
         };
-    }).filter(Boolean).sort((a, b) => b!.rotationStatus.daysDeployed - a!.rotationStatus.daysDeployed) || [];
+    }).filter(Boolean).sort((a, b) => {
+        const priDiff = a!.rotationStatus.priority - b!.rotationStatus.priority;
+        if (priDiff !== 0) return priDiff;
+        return b!.rotationStatus.daysDeployed - a!.rotationStatus.daysDeployed;
+    }) || [];
 
     const recentUnits = units?.slice(-5).reverse() || [];
 
