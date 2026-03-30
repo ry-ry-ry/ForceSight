@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { today, daysBetween } from '../../utils';
+import type { Unit } from '../../db';
+import { today, daysBetween, militaryNameCompare } from '../../utils';
 import { useState } from 'react';
 
 export default function DeploymentsTab({ unit }: any) {
@@ -13,6 +14,7 @@ export default function DeploymentsTab({ unit }: any) {
     );
 
     const operations = useLiveQuery(() => db.operations.toArray(), []);
+    const allUnits = useLiveQuery(() => db.units.toArray(), []);
 
     const handleCreate = () => {
         setCreating(true);
@@ -40,6 +42,7 @@ export default function DeploymentsTab({ unit }: any) {
                     <DeploymentForm
                         unitId={unit.id}
                         operations={operations}
+                        allUnits={allUnits}
                         onDone={() => setCreating(false)}
                     />
                 )}
@@ -52,6 +55,7 @@ export default function DeploymentsTab({ unit }: any) {
                                 deployment={d}
                                 unitId={unit.id}
                                 operations={operations}
+                                allUnits={allUnits}
                                 onDone={() => setEditing(null)}
                             />
                         ) : (
@@ -188,23 +192,169 @@ function DeploymentCard({ deployment, operations, onEdit, onDelete }: any) {
     );
 }
 
-function DeploymentForm({ deployment, unitId, operations, onDone }: any) {
+// ── Subordinate unit picker ──────────────────────────────────────────
+
+/** Recursively collect all descendant units of a given parent */
+function getAllDescendants(parentId: string, allUnits: Unit[]): Unit[] {
+    const direct = allUnits
+        .filter(u => u.parentId === parentId)
+        .sort((a, b) => militaryNameCompare(a.name, b.name));
+    const result: Unit[] = [];
+    for (const child of direct) {
+        result.push(child);
+        result.push(...getAllDescendants(child.id, allUnits));
+    }
+    return result;
+}
+
+/** Render a recursive, indented tree of subordinate units with checkboxes and patches */
+function SubordinateTree({ parentId, allUnits, selectedIds, onToggle, depth = 0 }: {
+    parentId: string;
+    allUnits: Unit[];
+    selectedIds: Set<string>;
+    onToggle: (id: string) => void;
+    depth?: number;
+}) {
+    const children = allUnits
+        .filter(u => u.parentId === parentId)
+        .sort((a, b) => militaryNameCompare(a.name, b.name));
+
+    if (children.length === 0) return null;
+
+    return (
+        <>
+            {children.map(sub => {
+                const hasChildren = allUnits.some(u => u.parentId === sub.id);
+                return (
+                    <div key={sub.id} style={{ paddingLeft: depth }}>
+                        <label
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--spacing-sm)',
+                                padding: '6px var(--spacing-sm)',
+                                background: hasChildren ? 'var(--color-bg-elevated)' : 'var(--color-bg-tertiary)',
+                                borderRadius: 'var(--radius-sm)',
+                                border: `1px solid ${hasChildren ? 'var(--color-border-accent)' : 'var(--color-border-primary)'}`,
+                                cursor: 'pointer',
+                                marginBottom: 3,
+                                transition: 'all 0.15s ease',
+                                userSelect: 'none'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.borderColor = hasChildren
+                                    ? 'var(--color-border-accent)'
+                                    : 'var(--color-border-primary)';
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={selectedIds.has(sub.id)}
+                                onChange={() => onToggle(sub.id)}
+                                style={{ accentColor: 'var(--color-accent-primary)', flexShrink: 0 }}
+                            />
+                            <span style={{ color: 'var(--color-accent-primary)', fontSize: 12, flexShrink: 0 }}>└─</span>
+                            {sub.patch && (
+                                <img
+                                    src={sub.patch}
+                                    alt={`${sub.name} patch`}
+                                    style={{
+                                        width: 28,
+                                        height: 28,
+                                        objectFit: 'contain',
+                                        borderRadius: 'var(--radius-sm)',
+                                        border: '1px solid var(--color-border-accent)',
+                                        flexShrink: 0
+                                    }}
+                                />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: hasChildren ? 600 : 'normal', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {sub.name}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 1 }}>
+                                    {sub.echelon || sub.type}
+                                </div>
+                            </div>
+                        </label>
+                        {hasChildren && (
+                            <SubordinateTree
+                                parentId={sub.id}
+                                allUnits={allUnits}
+                                selectedIds={selectedIds}
+                                onToggle={onToggle}
+                                depth={depth + 20}
+                            />
+                        )}
+                    </div>
+                );
+            })}
+        </>
+    );
+}
+
+// ── Deployment Form ──────────────────────────────────────────────────
+
+function DeploymentForm({ deployment, unitId, operations, allUnits, onDone }: any) {
     const [name, setName] = useState(deployment?.name || '');
     const [operation, setOperation] = useState(deployment?.operation || '');
     const [operationId, setOperationId] = useState(deployment?.operationId || '');
     const [startDate, setStartDate] = useState(deployment?.startDate || today());
     const [endDate, setEndDate] = useState(deployment?.endDate || '');
 
+    // Subordinate unit selection
+    const [applyToSubordinates, setApplyToSubordinates] = useState(false);
+    const [selectedSubIds, setSelectedSubIds] = useState<Set<string>>(new Set());
+
+    const subordinates = allUnits ? getAllDescendants(unitId, allUnits) : [];
+    const hasSubordinates = subordinates.length > 0;
+
+    const handleToggle = (id: string) => {
+        setSelectedSubIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedSubIds.size === subordinates.length) {
+            setSelectedSubIds(new Set());
+        } else {
+            setSelectedSubIds(new Set(subordinates.map(u => u.id)));
+        }
+    };
+
     const handleSave = async () => {
-        await db.deployments.put({
-            id: deployment?.id || crypto.randomUUID(),
-            unitId,
+        const baseDeployment = {
             name,
             operation: operation || undefined,
             operationId: operationId || undefined,
             startDate,
             endDate: endDate || undefined
+        };
+
+        // Save for the current unit
+        await db.deployments.put({
+            id: deployment?.id || crypto.randomUUID(),
+            unitId,
+            ...baseDeployment
         });
+
+        // Save for selected subordinate units (only on create, not edit)
+        if (!deployment && applyToSubordinates && selectedSubIds.size > 0) {
+            const subordinateDeployments = Array.from(selectedSubIds).map(subUnitId => ({
+                id: crypto.randomUUID(),
+                unitId: subUnitId,
+                ...baseDeployment
+            }));
+            await db.deployments.bulkPut(subordinateDeployments);
+        }
+
         onDone();
     };
 
@@ -288,6 +438,83 @@ function DeploymentForm({ deployment, unitId, operations, onDone }: any) {
                         />
                     </div>
                 </div>
+
+                {/* Subordinate unit application — only shown on create, and only if unit has subordinates */}
+                {!deployment && hasSubordinates && (
+                    <div style={{
+                        borderTop: '1px solid var(--color-border-primary)',
+                        paddingTop: 'var(--spacing-md)',
+                        marginTop: 'var(--spacing-xs)'
+                    }}>
+                        <label
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--spacing-sm)',
+                                cursor: 'pointer',
+                                fontSize: 13,
+                                fontWeight: 500,
+                                userSelect: 'none'
+                            }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={applyToSubordinates}
+                                onChange={e => {
+                                    setApplyToSubordinates(e.target.checked);
+                                    if (!e.target.checked) setSelectedSubIds(new Set());
+                                }}
+                                style={{ accentColor: 'var(--color-accent-primary)' }}
+                            />
+                            Apply to subordinate units
+                            <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 'normal' }}>
+                                ({subordinates.length} available)
+                            </span>
+                        </label>
+
+                        {applyToSubordinates && (
+                            <div style={{ marginTop: 'var(--spacing-md)' }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 'var(--spacing-sm)'
+                                }}>
+                                    <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                        Select units to include ({selectedSubIds.size} selected)
+                                    </div>
+                                    <button
+                                        onClick={handleSelectAll}
+                                        style={{
+                                            fontSize: 11,
+                                            padding: '3px 10px',
+                                            background: 'var(--color-bg-primary)',
+                                            borderColor: 'var(--color-border-accent)'
+                                        }}
+                                    >
+                                        {selectedSubIds.size === subordinates.length ? 'Deselect All' : 'Select All'}
+                                    </button>
+                                </div>
+
+                                <div style={{
+                                    maxHeight: 300,
+                                    overflowY: 'auto',
+                                    padding: 'var(--spacing-sm)',
+                                    background: 'var(--color-bg-primary)',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid var(--color-border-primary)'
+                                }}>
+                                    <SubordinateTree
+                                        parentId={unitId}
+                                        allUnits={allUnits || []}
+                                        selectedIds={selectedSubIds}
+                                        onToggle={handleToggle}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginTop: 'var(--spacing-lg)', justifyContent: 'flex-end' }}>
@@ -302,7 +529,9 @@ function DeploymentForm({ deployment, unitId, operations, onDone }: any) {
                         color: 'var(--color-bg-primary)'
                     }}
                 >
-                    Save
+                    {!deployment && applyToSubordinates && selectedSubIds.size > 0
+                        ? `Save (${selectedSubIds.size + 1} units)`
+                        : 'Save'}
                 </button>
             </div>
         </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { db } from '../db';
+import type { Deployment } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { today, daysBetween } from '../utils';
 
 function inferEchelon(name: string): string {
     const lower = name.toLowerCase();
@@ -28,6 +30,40 @@ export default function UnitForm({ unit, onDone }: any) {
     const [showParentDropdown, setShowParentDropdown] = useState(false);
 
     const allUnits = useLiveQuery(() => db.units.toArray(), []);
+
+    // Deployments belonging to the currently-selected parent unit
+    const parentDeployments = useLiveQuery(
+        () => parentId
+            ? db.deployments.where('unitId').equals(parentId).sortBy('startDate')
+            : Promise.resolve([] as Deployment[]),
+        [parentId]
+    );
+
+    // Which parent deployments to inherit (only relevant when creating)
+    const [inheritedDeploymentIds, setInheritedDeploymentIds] = useState<Set<string>>(new Set());
+
+    // Reset inherited selections whenever the parent changes
+    useEffect(() => {
+        setInheritedDeploymentIds(new Set());
+    }, [parentId]);
+
+    const handleToggleInherit = (id: string) => {
+        setInheritedDeploymentIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleInheritAll = () => {
+        if (!parentDeployments?.length) return;
+        if (inheritedDeploymentIds.size === parentDeployments.length) {
+            setInheritedDeploymentIds(new Set());
+        } else {
+            setInheritedDeploymentIds(new Set(parentDeployments.map(d => d.id)));
+        }
+    };
 
     useEffect(() => {
         if (!unit && name) {
@@ -80,9 +116,10 @@ export default function UnitForm({ unit, onDone }: any) {
 
     async function save() {
         const now = Date.now();
+        const unitId = unit?.id || crypto.randomUUID();
 
         await db.units.put({
-            id: unit?.id || crypto.randomUUID(),
+            id: unitId,
             name,
             type,
             echelon,
@@ -93,6 +130,21 @@ export default function UnitForm({ unit, onDone }: any) {
             lastRTBDate: rtb || undefined,
             createdAt: unit?.createdAt || now
         });
+
+        // Inherit selected deployments from parent (only on create)
+        if (!unit && parentId && inheritedDeploymentIds.size > 0 && parentDeployments?.length) {
+            const toInherit = parentDeployments.filter(d => inheritedDeploymentIds.has(d.id));
+            const newDeployments: Deployment[] = toInherit.map(d => ({
+                id: crypto.randomUUID(),
+                unitId,
+                name: d.name,
+                operation: d.operation,
+                operationId: d.operationId,
+                startDate: d.startDate,
+                endDate: d.endDate
+            }));
+            await db.deployments.bulkPut(newDeployments);
+        }
 
         onDone();
     }
@@ -327,6 +379,135 @@ export default function UnitForm({ unit, onDone }: any) {
                         )}
                     </div>
                 </div>
+
+                {/* Inherit deployments from parent — only shown when creating and a parent is selected */}
+                {!unit && parentId && parentDeployments && parentDeployments.length > 0 && (
+                    <div style={{
+                        padding: 'var(--spacing-md)',
+                        background: 'var(--color-bg-tertiary)',
+                        border: '1px solid var(--color-border-primary)',
+                        borderRadius: 'var(--radius-md)'
+                    }}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 'var(--spacing-sm)'
+                        }}>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                                Inherit Deployments from Parent
+                                <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 'normal', marginLeft: 6 }}>
+                                    ({parentDeployments.length} available)
+                                </span>
+                            </label>
+                            <button
+                                onClick={handleInheritAll}
+                                type="button"
+                                style={{
+                                    fontSize: 11,
+                                    padding: '3px 10px',
+                                    background: 'var(--color-bg-primary)',
+                                    borderColor: 'var(--color-border-accent)'
+                                }}
+                            >
+                                {inheritedDeploymentIds.size === parentDeployments.length ? 'Deselect All' : 'Select All'}
+                            </button>
+                        </div>
+
+                        <div style={{
+                            display: 'grid',
+                            gap: 4,
+                            maxHeight: 220,
+                            overflowY: 'auto'
+                        }}>
+                            {parentDeployments.map(d => {
+                                const isActive = !d.endDate;
+                                const duration = d.endDate
+                                    ? daysBetween(d.startDate, d.endDate)
+                                    : daysBetween(d.startDate, today());
+
+                                return (
+                                    <label
+                                        key={d.id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 'var(--spacing-sm)',
+                                            padding: '8px var(--spacing-sm)',
+                                            background: inheritedDeploymentIds.has(d.id)
+                                                ? 'var(--color-bg-elevated)'
+                                                : 'var(--color-bg-primary)',
+                                            borderRadius: 'var(--radius-sm)',
+                                            border: inheritedDeploymentIds.has(d.id)
+                                                ? '1px solid var(--color-accent-primary)'
+                                                : '1px solid var(--color-border-primary)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.15s ease',
+                                            userSelect: 'none'
+                                        }}
+                                        onMouseEnter={e => {
+                                            e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                                        }}
+                                        onMouseLeave={e => {
+                                            if (!inheritedDeploymentIds.has(d.id)) {
+                                                e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                                            }
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={inheritedDeploymentIds.has(d.id)}
+                                            onChange={() => handleToggleInherit(d.id)}
+                                            style={{ accentColor: 'var(--color-accent-primary)', flexShrink: 0 }}
+                                        />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+                                                <div style={{ fontWeight: 600, fontSize: 13 }}>
+                                                    {d.name}
+                                                </div>
+                                                {isActive && (
+                                                    <span style={{
+                                                        padding: '1px 6px',
+                                                        background: 'var(--color-status-deployed)',
+                                                        color: 'white',
+                                                        fontSize: 9,
+                                                        fontWeight: 600,
+                                                        borderRadius: 'var(--radius-sm)',
+                                                        textTransform: 'uppercase',
+                                                        letterSpacing: '0.5px'
+                                                    }}>
+                                                        Active
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                                                {d.startDate} → {d.endDate || 'Ongoing'}
+                                                <span style={{ marginLeft: 8, color: 'var(--color-accent-primary)' }}>
+                                                    {duration}d
+                                                </span>
+                                                {d.operation && (
+                                                    <span style={{ marginLeft: 8 }}>
+                                                        · {d.operation}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </label>
+                                );
+                            })}
+                        </div>
+
+                        {inheritedDeploymentIds.size > 0 && (
+                            <div style={{
+                                marginTop: 'var(--spacing-sm)',
+                                fontSize: 11,
+                                color: 'var(--color-accent-primary)'
+                            }}>
+                                {inheritedDeploymentIds.size} deployment{inheritedDeploymentIds.size !== 1 ? 's' : ''} will be copied to the new unit
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div>
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
