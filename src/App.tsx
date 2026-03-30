@@ -20,6 +20,37 @@ export default function App() {
     applyTheme(currentTheme);
   }, [currentTheme]);
 
+  // Dynamic page title
+  useEffect(() => {
+    const base = 'ForceSight';
+    let title = base;
+    switch (mode) {
+      case 'dashboard':
+        title = `${base} — Dashboard`;
+        break;
+      case 'operations':
+        title = `${base} — Operations`;
+        break;
+      case 'map':
+        title = `${base} — Map`;
+        break;
+      case 'create':
+        title = `${base} — New Unit`;
+        break;
+      case 'edit':
+        title = selected?.name
+          ? `${base} — Editing ${selected.name}`
+          : `${base} — Edit Unit`;
+        break;
+      case 'view':
+        title = selected?.name
+          ? `${selected.name} — ${base}`
+          : base;
+        break;
+    }
+    document.title = title;
+  }, [mode, selected]);
+
   const handleBackup = async () => {
     try {
       const units = await db.units.toArray();
