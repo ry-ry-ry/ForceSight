@@ -145,7 +145,7 @@ function DeploymentCard({ deployment, operations, onEdit, onDelete }: any) {
                     <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>
                         Start Date
                     </div>
-                    <div style={{ fontFamily: 'JetBrains Mono', fontSize: 13 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
                         {deployment.startDate}
                     </div>
                 </div>
@@ -153,7 +153,7 @@ function DeploymentCard({ deployment, operations, onEdit, onDelete }: any) {
                     <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>
                         End Date
                     </div>
-                    <div style={{ fontFamily: 'JetBrains Mono', fontSize: 13 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
                         {deployment.endDate || 'Ongoing'}
                     </div>
                 </div>
@@ -162,7 +162,7 @@ function DeploymentCard({ deployment, operations, onEdit, onDelete }: any) {
                         Duration
                     </div>
                     <div style={{
-                        fontFamily: 'JetBrains Mono',
+                        fontFamily: 'var(--font-mono)',
                         fontSize: 13,
                         color: 'var(--color-accent-primary)'
                     }}>

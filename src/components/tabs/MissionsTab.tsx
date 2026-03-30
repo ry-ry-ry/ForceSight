@@ -171,7 +171,7 @@ function MissionCard({ mission, operations, onEdit, onDelete }: any) {
                     <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 2 }}>
                         Start Date
                     </div>
-                    <div style={{ fontFamily: 'JetBrains Mono', fontSize: 12 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                         {mission.startDate}
                     </div>
                 </div>
@@ -179,7 +179,7 @@ function MissionCard({ mission, operations, onEdit, onDelete }: any) {
                     <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 2 }}>
                         End Date
                     </div>
-                    <div style={{ fontFamily: 'JetBrains Mono', fontSize: 12 }}>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                         {mission.endDate || 'Ongoing'}
                     </div>
                 </div>
@@ -188,7 +188,7 @@ function MissionCard({ mission, operations, onEdit, onDelete }: any) {
                         Duration
                     </div>
                     <div style={{
-                        fontFamily: 'JetBrains Mono',
+                        fontFamily: 'var(--font-mono)',
                         fontSize: 12,
                         color: 'var(--color-accent-primary)'
                     }}>

@@ -83,7 +83,7 @@ export default function Dashboard({ onSelectUnit }: any) {
                             fontSize: 24,
                             fontWeight: 600,
                             color: 'var(--color-accent-primary)',
-                            fontFamily: 'JetBrains Mono'
+                            fontFamily: 'var(--font-mono)'
                         }}>
                             {time.toLocaleTimeString('en-US', { hour12: false })}
                         </div>
@@ -342,7 +342,7 @@ function StatCard({ label, value, color, icon, delay }: any) {
                 fontSize: 36,
                 fontWeight: 700,
                 color: color || 'var(--color-text-primary)',
-                fontFamily: 'JetBrains Mono'
+                fontFamily: 'var(--font-mono)'
             }}>
                 {value}
             </div>
@@ -365,7 +365,7 @@ function StatusBar({ label, value, total, color }: any) {
                 <span style={{
                     color: color,
                     fontWeight: 600,
-                    fontFamily: 'JetBrains Mono'
+                    fontFamily: 'var(--font-mono)'
                 }}>
                     {value} / {total}
                 </span>
@@ -506,7 +506,7 @@ function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUn
                                 Days Deployed
                             </div>
                             <div style={{
-                                fontFamily: 'JetBrains Mono',
+                                fontFamily: 'var(--font-mono)',
                                 fontSize: 16,
                                 fontWeight: 600,
                                 color: rotationStatus.color
@@ -519,7 +519,7 @@ function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUn
                                 Threshold
                             </div>
                             <div style={{
-                                fontFamily: 'JetBrains Mono',
+                                fontFamily: 'var(--font-mono)',
                                 fontSize: 16,
                                 fontWeight: 600
                             }}>
@@ -562,7 +562,7 @@ function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUn
                         fontSize: 24,
                         fontWeight: 700,
                         color: rotationStatus.color,
-                        fontFamily: 'JetBrains Mono'
+                        fontFamily: 'var(--font-mono)'
                     }}>
                         {getStatusLabel()}
                     </div>

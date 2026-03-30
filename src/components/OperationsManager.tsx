@@ -278,11 +278,11 @@ function OperationCard({ operation, units, deployments, taskForces, onEdit, onDe
                     }}>
                         <div>
                             <span style={{ color: 'var(--color-text-secondary)' }}>Start:</span>{' '}
-                            <span style={{ fontFamily: 'JetBrains Mono' }}>{operation.startDate}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)' }}>{operation.startDate}</span>
                         </div>
                         <div>
                             <span style={{ color: 'var(--color-text-secondary)' }}>End:</span>{' '}
-                            <span style={{ fontFamily: 'JetBrains Mono' }}>{operation.endDate || 'Ongoing'}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)' }}>{operation.endDate || 'Ongoing'}</span>
                         </div>
                     </div>
                 </div>

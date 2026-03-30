@@ -471,7 +471,7 @@ export default function Sidebar({ select }: any) {
                             <span style={{
                                 fontSize: 11,
                                 color: 'var(--color-text-muted)',
-                                fontFamily: 'JetBrains Mono'
+                                fontFamily: 'var(--font-mono)'
                             }}>
                                 {typeUnits.length}
                             </span>

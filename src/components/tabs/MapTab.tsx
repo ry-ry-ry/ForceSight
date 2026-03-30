@@ -181,7 +181,7 @@ export default function MapTab({ unit }: any) {
                         borderRadius: 'var(--radius-sm)',
                         marginBottom: 'var(--spacing-lg)',
                         fontSize: 12,
-                        fontFamily: 'JetBrains Mono'
+                        fontFamily: 'var(--font-mono)'
                     }}>
                         <span style={{ color: 'var(--color-text-muted)' }}>Current Position:</span>{' '}
                         <span style={{ color: 'var(--color-accent-primary)' }}>
@@ -273,7 +273,7 @@ export default function MapTab({ unit }: any) {
                                     }}
                                 >
                                     <div style={{ fontWeight: 600, marginBottom: 2 }}>{u.name}</div>
-                                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'JetBrains Mono' }}>
+                                    <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'var(--font-mono)' }}>
                                         {u.locationLat!.toFixed(4)}, {u.locationLng!.toFixed(4)}
                                     </div>
                                 </div>

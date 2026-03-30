@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import UnitPanel from './components/UnitPanel';
 import UnitForm from './components/UnitForm';
 import Dashboard from './components/Dashboard';
 import OperationsManager from './components/OperationsManager';
 import { db } from './db';
+import { themes, getStoredTheme, applyTheme } from './theme';
 
 export default function App() {
   const [selected, setSelected] = useState<any>(null);
   const [mode, setMode] = useState<'dashboard' | 'operations' | 'view' | 'create' | 'edit'>('dashboard');
+  const [currentTheme, setCurrentTheme] = useState(getStoredTheme);
+
+  useEffect(() => {
+    applyTheme(currentTheme);
+  }, [currentTheme]);
 
   const handleBackup = async () => {
     try {
@@ -88,6 +94,22 @@ export default function App() {
           </button>
           <button onClick={() => setMode('create')}>+ New Unit</button>
           <div style={{ flex: 1 }} />
+          <select
+            className="input"
+            value={currentTheme}
+            onChange={e => setCurrentTheme(e.target.value)}
+            style={{
+              width: 'auto',
+              fontSize: 12,
+              padding: '6px 32px 6px 10px',
+              background: 'var(--color-bg-elevated)',
+              border: '1px solid var(--color-border-accent)'
+            }}
+          >
+            {themes.map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
           <button
             onClick={handleBackup}
             style={{

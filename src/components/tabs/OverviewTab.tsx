@@ -754,7 +754,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                                     fontSize: 16,
                                     fontWeight: 700,
                                     color: readiness.color,
-                                    fontFamily: 'JetBrains Mono',
+                                    fontFamily: 'var(--font-mono)',
                                     textTransform: 'uppercase'
                                 }}>
                                     {readiness.label}
@@ -1079,7 +1079,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                                             step={10}
                                             value={hierarchySettings.padding}
                                             onChange={e => setHierarchySettings(s => ({ ...s, padding: Math.max(0, parseInt(e.target.value) || 0) }))}
-                                            style={{ width: '100%', fontFamily: 'JetBrains Mono', fontSize: 12 }}
+                                            style={{ width: '100%', fontFamily: 'var(--font-mono)', fontSize: 12 }}
                                         />
                                     </div>
                                 </div>
@@ -1145,7 +1145,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                                             className="input"
                                             value={hierarchySettings.bgColor}
                                             onChange={e => setHierarchySettings(s => ({ ...s, bgColor: e.target.value }))}
-                                            style={{ flex: 1, fontFamily: 'JetBrains Mono', fontSize: 12 }}
+                                            style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 12 }}
                                             maxLength={7}
                                         />
                                     </div>
@@ -1174,7 +1174,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                                             className="input"
                                             value={hierarchySettings.connectionColor}
                                             onChange={e => setHierarchySettings(s => ({ ...s, connectionColor: e.target.value }))}
-                                            style={{ flex: 1, fontFamily: 'JetBrains Mono', fontSize: 12 }}
+                                            style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 12 }}
                                             maxLength={7}
                                         />
                                     </div>
@@ -1317,7 +1317,7 @@ function InfoRow({ label, value, valueColor }: any) {
             <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
             <span style={{
                 fontWeight: 600,
-                fontFamily: 'JetBrains Mono',
+                fontFamily: 'var(--font-mono)',
                 color: valueColor || 'var(--color-text-primary)'
             }}>
                 {value}
