@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { daysBetween, today, calculateReadiness, escapeXml } from '../../utils';
+import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare } from '../../utils';
 import type { Unit } from '../../db';
 import React, { useState } from 'react';
 
@@ -91,7 +91,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
         if (!allUnits) return [];
         return allUnits
             .filter(u => u.parentId === unitId)
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => militaryNameCompare(a.name, b.name));
     };
 
     const renderSubordinates = (parentUnit: Unit, depth: number = 0): React.ReactElement[] => {
@@ -99,58 +99,124 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
         const elements: React.ReactElement[] = [];
 
         subordinates.forEach(sub => {
-            elements.push(
-                <div
-                    key={sub.id}
-                    onClick={() => onSelectUnit(sub)}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 'var(--spacing-md)',
-                        paddingTop: 'var(--spacing-sm)',
-                        paddingRight: 'var(--spacing-sm)',
-                        paddingBottom: 'var(--spacing-sm)',
-                        paddingLeft: depth,
-                        background: 'var(--color-bg-tertiary)',
-                        borderRadius: 'var(--radius-sm)',
-                        border: '1px solid var(--color-border-primary)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'var(--color-bg-elevated)';
-                        e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-                        e.currentTarget.style.borderColor = 'var(--color-border-primary)';
-                    }}
-                >
-                    <span style={{ color: 'var(--color-accent-primary)', fontSize: 12 }}>└─</span>
-                    {sub.patch && (
-                        <img
-                            src={sub.patch}
-                            alt={`${sub.name} patch`}
+            const subChildren = getSubordinates(sub.id);
+            const hasChildren = subChildren.length > 0;
+
+            if (hasChildren) {
+                // Render as a parent group header
+                elements.push(
+                    <div
+                        key={`header-${sub.id}`}
+                        style={{
+                            marginTop: depth > 0 ? 'var(--spacing-sm)' : 0,
+                            paddingLeft: depth
+                        }}
+                    >
+                        <div
+                            onClick={() => onSelectUnit(sub)}
                             style={{
-                                width: 32,
-                                height: 32,
-                                objectFit: 'contain',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--spacing-md)',
+                                paddingTop: 'var(--spacing-sm)',
+                                paddingRight: 'var(--spacing-sm)',
+                                paddingBottom: 'var(--spacing-sm)',
+                                paddingLeft: 'var(--spacing-sm)',
+                                background: 'var(--color-bg-elevated)',
                                 borderRadius: 'var(--radius-sm)',
-                                border: '1px solid var(--color-border-accent)'
+                                border: '1px solid var(--color-border-accent)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                marginBottom: 4
                             }}
-                        />
-                    )}
-                    <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: sub.id === unit.id ? 'bold' : 'normal', fontSize: 13 }}>
-                            {sub.name}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--color-border-accent)';
+                            }}
+                        >
+                            <span style={{ color: 'var(--color-accent-primary)', fontSize: 12 }}>└─</span>
+                            {sub.patch && (
+                                <img
+                                    src={sub.patch}
+                                    alt={`${sub.name} patch`}
+                                    style={{
+                                        width: 32,
+                                        height: 32,
+                                        objectFit: 'contain',
+                                        borderRadius: 'var(--radius-sm)',
+                                        border: '1px solid var(--color-border-accent)'
+                                    }}
+                                />
+                            )}
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>
+                                    {sub.name}
+                                </div>
+                                <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                                    {sub.echelon || sub.type} · {subChildren.length} subordinate{subChildren.length !== 1 ? 's' : ''}
+                                </div>
+                            </div>
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
-                            {sub.echelon || sub.type}
+                        {renderSubordinates(sub, depth + 20)}
+                    </div>
+                );
+            } else {
+                // Render as a leaf unit
+                elements.push(
+                    <div
+                        key={sub.id}
+                        onClick={() => onSelectUnit(sub)}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-md)',
+                            paddingTop: 'var(--spacing-sm)',
+                            paddingRight: 'var(--spacing-sm)',
+                            paddingBottom: 'var(--spacing-sm)',
+                            paddingLeft: depth,
+                            background: 'var(--color-bg-tertiary)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--color-border-primary)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            marginBottom: 2
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--color-bg-elevated)';
+                            e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--color-bg-tertiary)';
+                            e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                        }}
+                    >
+                        <span style={{ color: 'var(--color-accent-primary)', fontSize: 12 }}>└─</span>
+                        {sub.patch && (
+                            <img
+                                src={sub.patch}
+                                alt={`${sub.name} patch`}
+                                style={{
+                                    width: 32,
+                                    height: 32,
+                                    objectFit: 'contain',
+                                    borderRadius: 'var(--radius-sm)',
+                                    border: '1px solid var(--color-border-accent)'
+                                }}
+                            />
+                        )}
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: sub.id === unit.id ? 'bold' : 'normal', fontSize: 13 }}>
+                                {sub.name}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                                {sub.echelon || sub.type}
+                            </div>
                         </div>
                     </div>
-                </div>
-            );
-            elements.push(...renderSubordinates(sub, depth + 20));
+                );
+            }
         });
 
         return elements;
@@ -165,7 +231,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
 
         const children = allUnits
             .filter(u => u.parentId === rootUnit.id)
-            .sort((a, b) => a.name.localeCompare(b.name))
+            .sort((a, b) => militaryNameCompare(a.name, b.name))
             .map(child => buildHierarchyTree(child, allUnits, settings))
             .filter((node): node is HierarchyNode => node !== null);
 

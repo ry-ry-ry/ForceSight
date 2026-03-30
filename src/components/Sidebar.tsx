@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import React, { useState } from 'react';
 import type { Unit } from '../db';
+import { militaryNameCompare } from '../utils';
 
 export default function Sidebar({ select }: any) {
     const [search, setSearch] = useState('');
@@ -93,7 +94,7 @@ export default function Sidebar({ select }: any) {
         const sorted = [...units];
         switch (sortBy) {
             case 'name':
-                sorted.sort((a, b) => a.name.localeCompare(b.name));
+                sorted.sort((a, b) => militaryNameCompare(a.name, b.name));
                 break;
             case 'status':
                 sorted.sort((a, b) => a.status.localeCompare(b.status));
@@ -146,7 +147,7 @@ export default function Sidebar({ select }: any) {
     const getChildren = (parentId: string, allUnits: Unit[]) => {
         return allUnits
             .filter(u => u.parentId === parentId && u.type !== 'Command')
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => militaryNameCompare(a.name, b.name));
     };
 
     const getParentCommand = (unit: Unit) => {

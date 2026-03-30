@@ -15,6 +15,30 @@ export const escapeXml = (str: string): string =>
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 
+/**
+ * Natural sort comparator for military unit names with ordinal numbers.
+ * Splits names on numeric boundaries and compares numbers numerically,
+ * so "1st SFG" < "2nd SFG" < "10th SFG" < "19th SFG"
+ * instead of alphabetical "10th" < "19th" < "1st" < "2nd".
+ */
+export const militaryNameCompare = (a: string, b: string): number => {
+    const tokenize = (s: string) =>
+        s.split(/(\d+)/).map(t => /^\d+$/.test(t) ? parseInt(t, 10) : t.toLowerCase());
+    const at = tokenize(a);
+    const bt = tokenize(b);
+    for (let i = 0; i < Math.max(at.length, bt.length); i++) {
+        const av = at[i] ?? '';
+        const bv = bt[i] ?? '';
+        if (typeof av === 'number' && typeof bv === 'number') {
+            if (av !== bv) return av - bv;
+        } else {
+            const cmp = String(av).localeCompare(String(bv));
+            if (cmp !== 0) return cmp;
+        }
+    }
+    return 0;
+};
+
 export interface ReadinessStatus {
     level: 'high' | 'medium' | 'low';
     color: string;
