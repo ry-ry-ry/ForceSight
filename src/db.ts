@@ -57,12 +57,43 @@ export interface TaskForce {
     createdAt: number;
 }
 
+export interface MapIcon {
+    id: string;
+    name: string;
+    image: string; // base64 encoded
+    createdAt: number;
+}
+
+export interface MapPin {
+    id: string;
+    name: string;
+    iconId?: string; // references MapIcon.id
+    lat: number;
+    lng: number;
+    description?: string;
+    properties?: string; // JSON string for extensibility
+    createdAt: number;
+}
+
+export interface MapShape {
+    id: string;
+    name: string;
+    type: 'polygon' | 'polyline' | 'circle';
+    coordinates: string; // JSON string: [number, number][]
+    style: string; // JSON string: { color, fillOpacity, lineWidth }
+    description?: string;
+    createdAt: number;
+}
+
 class DB extends Dexie {
     units!: Table<Unit, string>;
     deployments!: Table<Deployment, string>;
     operations!: Table<Operation, string>;
     missions!: Table<Mission, string>;
     taskForces!: Table<TaskForce, string>;
+    mapIcons!: Table<MapIcon, string>;
+    mapPins!: Table<MapPin, string>;
+    mapShapes!: Table<MapShape, string>;
 
     constructor() {
         super('unitDB');
@@ -96,6 +127,16 @@ class DB extends Dexie {
             operations: 'id, name, status, startDate',
             missions: 'id, unitId, operationId',
             taskForces: 'id, name, operationId'
+        });
+        this.version(7).stores({
+            units: 'id, name, parentId, echelon, country, taskForceId',
+            deployments: 'id, unitId, operationId',
+            operations: 'id, name, status, startDate',
+            missions: 'id, unitId, operationId',
+            taskForces: 'id, name, operationId',
+            mapIcons: 'id, name',
+            mapPins: 'id, name, iconId',
+            mapShapes: 'id, name, type'
         });
     }
 }

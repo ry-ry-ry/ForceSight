@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import OverviewTab from './tabs/OverviewTab';
 import DeploymentsTab from './tabs/DeploymentsTab';
 import MissionsTab from './tabs/MissionsTab';
-import MapTab from './tabs/MapTab';
+
+const MapTab = lazy(() => import('./tabs/MapTab'));
 
 export default function UnitPanel({ unit, onEdit, onSelectUnit }: any) {
     const [tab, setTab] = useState<'overview' | 'deployments' | 'missions' | 'map'>('overview');
@@ -123,7 +124,15 @@ export default function UnitPanel({ unit, onEdit, onSelectUnit }: any) {
             {tab === 'overview' && <OverviewTab unit={unit} onSelectUnit={onSelectUnit} />}
             {tab === 'deployments' && <DeploymentsTab unit={unit} />}
             {tab === 'missions' && <MissionsTab unit={unit} />}
-            {tab === 'map' && <MapTab unit={unit} />}
+            {tab === 'map' && (
+                <Suspense fallback={
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 400, color: 'var(--color-text-muted)' }}>
+                        Loading map...
+                    </div>
+                }>
+                    <MapTab unit={unit} />
+                </Suspense>
+            )}
 
         </div>
     );

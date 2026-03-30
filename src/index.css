@@ -490,3 +490,16 @@ select.input {
   border-radius: 50%;
   box-shadow: 0 0 10px var(--color-accent-primary);
 }
+
+/* Cesium Viewer Overrides */
+.cesium-viewer {
+  font-family: var(--font-body) !important;
+}
+
+.cesium-viewer-bottom {
+  display: none !important;
+}
+
+.cesium-widget canvas {
+  outline: none;
+}
