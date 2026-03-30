@@ -2,22 +2,16 @@ ForceSight is a program for managing unit deployments and military operations, a
 
 There is a private program built for private use, so it doesn't come with any data.
 
-Vibe coded. Use at your own risk.
+AI assisted.
 
 Previews:
 
-**Unit Overview**
+<img width="2124" height="1530" alt="image" src="https://github.com/user-attachments/assets/90640f45-6395-437b-87aa-40eb9e032237" />
 
-<img width="2131" height="1407" alt="image" src="https://github.com/user-attachments/assets/02462b01-bbf3-4e81-8692-297e1689f8a7" />
+<img width="3835" height="1906" alt="image" src="https://github.com/user-attachments/assets/17b6ccac-4284-4deb-8d77-48dc88c2ba38" />
 
-**Operations Manager**
+<img width="3840" height="1906" alt="image" src="https://github.com/user-attachments/assets/077837f6-8aa7-4152-acf5-ba365b2a013c" />
 
-<img width="2095" height="1552" alt="image" src="https://github.com/user-attachments/assets/ea640905-2df2-46a8-8283-b720349133dd" />
+<img width="3358" height="1169" alt="image" src="https://github.com/user-attachments/assets/0ca6f6f1-9b1f-4171-9499-b5b8b4dd2bc6" />
 
-**Unit List**
-
-<img width="468" height="1897" alt="image" src="https://github.com/user-attachments/assets/9b5510e1-c178-4478-8b80-d80b3f93320d" />
-
-**Dashboard**
-
-<img width="2113" height="1686" alt="image" src="https://github.com/user-attachments/assets/b63c5556-7d5f-456b-98dc-68b9d3443bab" />
+<img width="1960" height="1524" alt="image" src="https://github.com/user-attachments/assets/1b31bb9d-3e72-4934-a763-a304e833e4ef" />
