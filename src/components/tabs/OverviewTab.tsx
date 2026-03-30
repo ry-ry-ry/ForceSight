@@ -15,12 +15,16 @@ interface HierarchyNode {
 interface HierarchySettings {
     orientation: 'vertical' | 'horizontal';
     includeEchelons: string[];
-    format: 'svg' | 'html';
+    format: 'svg' | 'html' | 'poster';
     bgColor: string;
     connectionColor: string;
     nodeStyle: 'card' | 'bare';
     scale: number;
     padding: number;
+    posterHeader: string;
+    posterFooter: string;
+    posterHeaderColor: string;
+    posterFooterColor: string;
 }
 
 export default function OverviewTab({ unit, onSelectUnit }: any) {
@@ -43,7 +47,11 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
         connectionColor: '#00d9ff',
         nodeStyle: 'card',
         scale: 1,
-        padding: 80
+        padding: 80,
+        posterHeader: '',
+        posterFooter: '',
+        posterHeaderColor: '#c9a227',
+        posterFooterColor: '#6d6350'
     });
 
     const active = deployments?.find(d => !d.endDate);
@@ -724,6 +732,11 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
     const downloadHierarchyImage = () => {
         const baseName = unit.name.replace(/\s+/g, '-').toLowerCase();
 
+        if (hierarchySettings.format === 'poster') {
+            downloadPosterImage(baseName);
+            return;
+        }
+
         if (hierarchySettings.format === 'html') {
             const html = generateHierarchyHTML(hierarchySettings);
             if (!html) return;
@@ -749,6 +762,252 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+    };
+
+    /**
+     * Poster export: generates a purpose-built 4000×5600 PNG poster
+     * with large patches, proper connection lines, and header/footer text.
+     */
+    const downloadPosterImage = (baseName: string) => {
+        if (!allUnits) return;
+
+        const POSTER_W = 4000;
+        const POSTER_H = 5600;
+        const EDGE_MARGIN = 200;
+        const bg = hierarchySettings.bgColor;
+        const connColor = hierarchySettings.connectionColor;
+        const settings = hierarchySettings;
+
+        const tree = buildHierarchyTree(unit, allUnits, settings);
+        if (!tree) return;
+
+        // ── Poster-specific sizing: much larger patches ──
+        const P_BADGE_ROOT = 200;
+        const P_BADGE_CHILD = 140;
+        const P_FONT_ROOT = 28;
+        const P_FONT_CHILD = 22;
+        const P_LINE_H = 32;
+        const P_TEXT_PAD = 16;
+        const P_NODE_W = 320;
+        const P_CONN_GAP = 20; // gap between node content and connection line
+
+        // Text wrapping for poster
+        const wrapPoster = (text: string, maxW: number, fs: number): string[] => {
+            const cpl = Math.max(1, Math.floor(maxW / (fs * 0.52)));
+            const words = text.split(' ');
+            const lines: string[] = [];
+            let cur = '';
+            words.forEach(w => {
+                const c = cur ? `${cur} ${w}` : w;
+                if (c.length <= cpl) { cur = c; } else {
+                    if (cur) lines.push(cur);
+                    if (w.length > cpl) {
+                        let r = w;
+                        while (r.length > cpl) { lines.push(r.substring(0, cpl)); r = r.substring(cpl); }
+                        cur = r;
+                    } else { cur = w; }
+                }
+            });
+            if (cur) lines.push(cur);
+            return lines;
+        };
+
+        // Calculate total height of a node (badge + text lines)
+        const getNodeTotalH = (nodeName: string, isRoot: boolean): number => {
+            const badge = isRoot ? P_BADGE_ROOT : P_BADGE_CHILD;
+            const fs = isRoot ? P_FONT_ROOT : P_FONT_CHILD;
+            const lines = wrapPoster(nodeName, P_NODE_W, fs);
+            return badge + P_TEXT_PAD + lines.length * P_LINE_H;
+        };
+
+        // ── Layout: calculate subtree widths and positions ──
+        const isHorizontal = settings.orientation === 'horizontal';
+        const maxNodeH = Math.max(getNodeTotalH(unit.name, true), P_BADGE_CHILD + P_TEXT_PAD + P_LINE_H * 2);
+        const levelSpacing = isHorizontal ? P_NODE_W + 120 : maxNodeH + 100;
+
+        // Subtree sizing (reuse existing logic with poster node width)
+        const calcSize = (node: HierarchyNode): number => {
+            if (node.children.length === 0) { node.width = P_NODE_W; return P_NODE_W; }
+            let total = 0;
+            node.children.forEach(c => { total += calcSize(c); });
+            total += (node.children.length - 1) * 60;
+            node.width = Math.max(P_NODE_W, total);
+            return node.width;
+        };
+        const totalSize = calcSize(tree);
+
+        const getDepth = (n: HierarchyNode): number => n.children.length === 0 ? 1 : 1 + Math.max(...n.children.map(getDepth));
+        const depth = getDepth(tree);
+
+        // Header/footer space
+        const headerH = settings.posterHeader ? 120 : 0;
+        const footerH = settings.posterFooter ? 100 : 0;
+
+        // Determine the natural content size
+        const contentW = isHorizontal ? depth * levelSpacing : totalSize;
+        const contentH = isHorizontal ? totalSize : depth * levelSpacing;
+
+        // Available drawing area
+        const availW = POSTER_W - EDGE_MARGIN * 2;
+        const availH = POSTER_H - EDGE_MARGIN * 2 - headerH - footerH;
+
+        // Scale chart to fill the poster area
+        const fitScale = Math.min(availW / contentW, availH / contentH);
+        const chartW = contentW * fitScale;
+        const chartH = contentH * fitScale;
+        const chartOffsetX = EDGE_MARGIN + (availW - chartW) / 2;
+        const chartOffsetY = EDGE_MARGIN + headerH + (availH - chartH) / 2;
+
+        // Position nodes in the natural coordinate space
+        if (isHorizontal) {
+            const posH = (n: HierarchyNode, x: number, y: number) => {
+                n.x = x; n.y = y + n.width / 2;
+                let cy = y;
+                n.children.forEach(c => { posH(c, x + levelSpacing, cy); cy += c.width + 60; });
+            };
+            posH(tree, 0, 0);
+        } else {
+            const posV = (n: HierarchyNode, x: number, y: number) => {
+                n.x = x + n.width / 2; n.y = y;
+                let cx = x;
+                n.children.forEach(c => { posV(c, cx, y + levelSpacing); cx += c.width + 60; });
+            };
+            posV(tree, 0, 0);
+        }
+
+        // ── Build poster SVG ──
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${POSTER_W}" height="${POSTER_H}" viewBox="0 0 ${POSTER_W} ${POSTER_H}">`;
+        svg += `<rect width="100%" height="100%" fill="${bg}"/>`;
+
+        // Header text
+        if (settings.posterHeader) {
+            const hx = POSTER_W / 2;
+            const hy = EDGE_MARGIN + 60;
+            svg += `<text x="${hx}" y="${hy}" text-anchor="middle" fill="${settings.posterHeaderColor}" font-family="'Barlow Condensed', 'Rajdhani', sans-serif" font-size="60" font-weight="700" letter-spacing="6" text-transform="uppercase">${escapeXml(settings.posterHeader)}</text>`;
+            // Decorative accent line beneath header
+            const lineW = 600;
+            svg += `<line x1="${hx - lineW / 2}" y1="${hy + 24}" x2="${hx + lineW / 2}" y2="${hy + 24}" stroke="${settings.posterHeaderColor}" stroke-width="2" opacity="0.4"/>`;
+            svg += `<circle cx="${hx}" cy="${hy + 24}" r="4" fill="${settings.posterHeaderColor}" opacity="0.6"/>`;
+        }
+
+        // Footer text
+        if (settings.posterFooter) {
+            const fx = POSTER_W / 2;
+            const fy = POSTER_H - EDGE_MARGIN + 20;
+            // Decorative accent line above footer
+            const lineW = 400;
+            svg += `<line x1="${fx - lineW / 2}" y1="${fy - 30}" x2="${fx + lineW / 2}" y2="${fy - 30}" stroke="${settings.posterFooterColor}" stroke-width="1" opacity="0.3"/>`;
+            svg += `<text x="${fx}" y="${fy}" text-anchor="middle" fill="${settings.posterFooterColor}" font-family="'Barlow Condensed', 'Rajdhani', sans-serif" font-size="28" font-weight="600" letter-spacing="4">${escapeXml(settings.posterFooter)}</text>`;
+        }
+
+        // Transform helper: convert natural coords to poster coords
+        const tx = (x: number) => chartOffsetX + x * fitScale;
+        const ty = (y: number) => chartOffsetY + y * fitScale;
+        const ts = (s: number) => s * fitScale;
+
+        // ── Draw connections ──
+        // Connection lines attach to bottom of the entire node (patch + text block),
+        // not from the patch center. Enter at top of patch with a gap.
+        const nodeBottomY = (node: HierarchyNode, isRoot: boolean): number => {
+            return node.y + getNodeTotalH(node.unit.name, isRoot);
+        };
+
+        const drawConn = (node: HierarchyNode, isRoot: boolean): void => {
+            if (node.children.length === 0) return;
+
+            if (isHorizontal) {
+                const parentRightX = tx(node.x) + ts(P_NODE_W / 2) + ts(P_CONN_GAP);
+                const crossX = parentRightX + ts(30);
+                svg += `<line x1="${parentRightX}" y1="${ty(node.y)}" x2="${crossX}" y2="${ty(node.y)}" stroke="${connColor}" stroke-width="3"/>`;
+                const topY = ty(node.children[0].y);
+                const botY = ty(node.children[node.children.length - 1].y);
+                if (topY !== botY) svg += `<line x1="${crossX}" y1="${topY}" x2="${crossX}" y2="${botY}" stroke="${connColor}" stroke-width="3"/>`;
+                node.children.forEach(c => {
+                    const childLeftX = tx(c.x) - ts(P_NODE_W / 2) - ts(P_CONN_GAP);
+                    svg += `<line x1="${crossX}" y1="${ty(c.y)}" x2="${childLeftX}" y2="${ty(c.y)}" stroke="${connColor}" stroke-width="3"/>`;
+                });
+            } else {
+                const parentBotY = ty(nodeBottomY(node, isRoot)) + ts(P_CONN_GAP);
+                const crossY = parentBotY + ts(30);
+                svg += `<line x1="${tx(node.x)}" y1="${parentBotY}" x2="${tx(node.x)}" y2="${crossY}" stroke="${connColor}" stroke-width="3"/>`;
+                const leftX = tx(node.children[0].x);
+                const rightX = tx(node.children[node.children.length - 1].x);
+                if (leftX !== rightX) svg += `<line x1="${leftX}" y1="${crossY}" x2="${rightX}" y2="${crossY}" stroke="${connColor}" stroke-width="3"/>`;
+                node.children.forEach(c => {
+                    const childTopY = ty(c.y) - ts(P_CONN_GAP);
+                    svg += `<line x1="${tx(c.x)}" y1="${crossY}" x2="${tx(c.x)}" y2="${childTopY}" stroke="${connColor}" stroke-width="3"/>`;
+                });
+            }
+            node.children.forEach(c => drawConn(c, false));
+        };
+        drawConn(tree, true);
+
+        // ── Draw nodes ──
+        const drawPosterNode = (node: HierarchyNode, isRoot: boolean): void => {
+            const badge = isRoot ? P_BADGE_ROOT : P_BADGE_CHILD;
+            const fs = isRoot ? P_FONT_ROOT : P_FONT_CHILD;
+            const lines = wrapPoster(node.unit.name, P_NODE_W, fs);
+
+            let cx: number, topY: number;
+            if (isHorizontal) {
+                cx = tx(node.x);
+                topY = ty(node.y) - ts(badge / 2 + (lines.length * P_LINE_H) / 2);
+            } else {
+                cx = tx(node.x);
+                topY = ty(node.y);
+            }
+
+            const scaledBadge = ts(badge);
+            const scaledFs = ts(fs);
+            const scaledLineH = ts(P_LINE_H);
+            const scaledTextPad = ts(P_TEXT_PAD);
+
+            // Patch
+            if (node.unit.patch) {
+                svg += `<image href="${escapeXml(node.unit.patch)}" x="${cx - scaledBadge / 2}" y="${topY}" width="${scaledBadge}" height="${scaledBadge}" preserveAspectRatio="xMidYMid meet"/>`;
+            } else {
+                const r = scaledBadge / 2 - 4;
+                svg += `<circle cx="${cx}" cy="${topY + scaledBadge / 2}" r="${r}" fill="#1a1f3a" stroke="${connColor}" stroke-width="2"/>`;
+            }
+
+            // Name below patch
+            const nameY = topY + scaledBadge + scaledTextPad + scaledFs * 0.8;
+            lines.forEach((line, i) => {
+                svg += `<text x="${cx}" y="${nameY + i * scaledLineH}" text-anchor="middle" fill="#f8fafc" font-family="'Rajdhani', sans-serif" font-size="${scaledFs}" font-weight="600">${escapeXml(line)}</text>`;
+            });
+
+            node.children.forEach(c => drawPosterNode(c, false));
+        };
+        drawPosterNode(tree, true);
+
+        svg += '</svg>';
+
+        // ── Render SVG to canvas as PNG ──
+        const canvas = document.createElement('canvas');
+        canvas.width = POSTER_W;
+        canvas.height = POSTER_H;
+        const ctx = canvas.getContext('2d')!;
+
+        const img = new Image();
+        img.onload = () => {
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+            ctx.drawImage(img, 0, 0, POSTER_W, POSTER_H);
+            canvas.toBlob(blob => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${baseName}-hierarchy-poster.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        };
+
+        const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+        img.src = URL.createObjectURL(svgBlob);
     };
 
     const hierarchy = buildHierarchy();
@@ -1177,13 +1436,76 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                                     >
                                         HTML Page
                                     </button>
+                                    <button
+                                        onClick={() => setHierarchySettings(s => ({ ...s, format: 'poster' }))}
+                                        style={{
+                                            flex: 1,
+                                            background: hierarchySettings.format === 'poster' ? 'var(--color-accent-primary)' : 'var(--color-bg-elevated)',
+                                            color: hierarchySettings.format === 'poster' ? 'var(--color-bg-primary)' : 'var(--color-text-primary)'
+                                        }}
+                                    >
+                                        Poster
+                                    </button>
                                 </div>
                                 {hierarchySettings.format === 'html' && (
                                     <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>
                                         A self-contained HTML page with a clean header and scrollable chart
                                     </div>
                                 )}
+                                {hierarchySettings.format === 'poster' && (
+                                    <div style={{ marginTop: 6, fontSize: 11, color: 'var(--color-text-muted)' }}>
+                                        4000×5600 PNG (1:1.4 ratio, 300 DPI, sRGB). Print-ready poster format.
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Poster Header / Footer */}
+                            {hierarchySettings.format === 'poster' && (
+                                <div style={{ display: 'grid', gap: 'var(--spacing-md)' }}>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: 4, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                            Poster Header Text
+                                        </label>
+                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                            <input
+                                                className="input"
+                                                value={hierarchySettings.posterHeader}
+                                                onChange={e => setHierarchySettings(s => ({ ...s, posterHeader: e.target.value }))}
+                                                placeholder="e.g. UNIT ORGANIZATION CHART"
+                                                style={{ flex: 1, fontFamily: 'var(--font-heading)', fontSize: 14, letterSpacing: '1px', textTransform: 'uppercase' }}
+                                            />
+                                            <input
+                                                type="color"
+                                                value={hierarchySettings.posterHeaderColor}
+                                                onChange={e => setHierarchySettings(s => ({ ...s, posterHeaderColor: e.target.value }))}
+                                                title="Header colour"
+                                                style={{ width: 36, height: 34, border: '1px solid var(--color-border-primary)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'none', padding: 2, flexShrink: 0 }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style={{ display: 'block', marginBottom: 4, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                            Poster Footer Text
+                                        </label>
+                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                            <input
+                                                className="input"
+                                                value={hierarchySettings.posterFooter}
+                                                onChange={e => setHierarchySettings(s => ({ ...s, posterFooter: e.target.value }))}
+                                                placeholder="e.g. UNCLASSIFIED // FOR OFFICIAL USE ONLY"
+                                                style={{ flex: 1, fontFamily: 'var(--font-heading)', fontSize: 13, letterSpacing: '1px', textTransform: 'uppercase' }}
+                                            />
+                                            <input
+                                                type="color"
+                                                value={hierarchySettings.posterFooterColor}
+                                                onChange={e => setHierarchySettings(s => ({ ...s, posterFooterColor: e.target.value }))}
+                                                title="Footer colour"
+                                                style={{ width: 36, height: 34, border: '1px solid var(--color-border-primary)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'none', padding: 2, flexShrink: 0 }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Colours */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-md)' }}>
@@ -1358,7 +1680,7 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                                     color: 'var(--color-bg-primary)'
                                 }}
                             >
-                                Download {hierarchySettings.format === 'html' ? 'HTML' : 'SVG'}
+                                Download {hierarchySettings.format === 'html' ? 'HTML' : hierarchySettings.format === 'poster' ? 'Poster PNG' : 'SVG'}
                             </button>
                         </div>
                     </div>
