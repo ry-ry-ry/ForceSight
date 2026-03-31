@@ -16,6 +16,8 @@ export default function Sidebar({ select }: any) {
     const [filterEchelon, setFilterEchelon] = useState<string>('');
     const [filterStatus, setFilterStatus] = useState<string>('');
     const [filterOperation, setFilterOperation] = useState<string>('');
+    const [filterHealth, setFilterHealth] = useState<string>('');
+    const [filterEffectiveness, setFilterEffectiveness] = useState<string>('');
 
     const units = useLiveQuery(() => db.units.toArray(), []);
     const deployments = useLiveQuery(() => db.deployments.toArray(), []);
@@ -86,6 +88,33 @@ export default function Sidebar({ select }: any) {
                 }
             }
 
+            // Health filter
+            if (filterHealth && (u.health || 'Healthy') !== filterHealth) {
+                return false;
+            }
+
+            // Effectiveness filter
+            if (filterEffectiveness) {
+                const eff = u.effectiveness ?? 100;
+                switch (filterEffectiveness) {
+                    case 'effective':
+                        if (eff < 80) return false;
+                        break;
+                    case 'slightly-degraded':
+                        if (eff < 70 || eff >= 80) return false;
+                        break;
+                    case 'degraded':
+                        if (eff < 60 || eff >= 70) return false;
+                        break;
+                    case 'heavily-degraded':
+                        if (eff < 40 || eff >= 60) return false;
+                        break;
+                    case 'combat-ineffective':
+                        if (eff >= 40) return false;
+                        break;
+                }
+            }
+
             return true;
         });
     };
@@ -122,21 +151,29 @@ export default function Sidebar({ select }: any) {
             Support: []
         };
 
-        // Include units that are either:
-        // 1. Top-level (no parent), OR
-        // 2. Direct children of Command-type units
-        // Exclude Command-type units themselves
-        // Use all units (not filtered units) to find parent Commands
+        // When filters are active (beyond just search), show ALL matching units
+        // flat — so subordinate units that match a filter aren't hidden behind
+        // unexpanded / non-matching parents.
+        const hasActiveFilters = !!(filterCountry || filterEchelon || filterStatus || filterOperation || filterHealth || filterEffectiveness);
+
         unitsToGroup.forEach(u => {
             if (u.type === 'Command') return; // Skip Commands
 
-            const isTopLevel = !u.parentId;
-            const parentUnit = u.parentId ? units?.find((p: Unit) => p.id === u.parentId) : null;
-            const isChildOfCommand = parentUnit?.type === 'Command';
-
-            if (isTopLevel || isChildOfCommand) {
+            if (hasActiveFilters) {
+                // Flat mode: every matching unit appears as a root entry
                 if (groups[u.type]) {
                     groups[u.type].push(u);
+                }
+            } else {
+                // Tree mode: only top-level or direct children of Commands
+                const isTopLevel = !u.parentId;
+                const parentUnit = u.parentId ? units?.find((p: Unit) => p.id === u.parentId) : null;
+                const isChildOfCommand = parentUnit?.type === 'Command';
+
+                if (isTopLevel || isChildOfCommand) {
+                    if (groups[u.type]) {
+                        groups[u.type].push(u);
+                    }
                 }
             }
         });
@@ -157,8 +194,8 @@ export default function Sidebar({ select }: any) {
         return null;
     };
 
-    const renderUnit = (u: Unit, depth: number, allUnits: Unit[]): React.ReactElement => {
-        const children = getChildren(u.id, allUnits);
+    const renderUnit = (u: Unit, depth: number, allUnits: Unit[], flatMode: boolean = false): React.ReactElement => {
+        const children = flatMode ? [] : getChildren(u.id, allUnits);
         const hasChildren = children.length > 0;
         const isExpanded = expandedUnits.has(u.id);
         const parentCommand = getParentCommand(u);
@@ -287,7 +324,8 @@ export default function Sidebar({ select }: any) {
     const sorted = sortUnits(filtered);
     const grouped = groupByType(sorted);
 
-    const activeFiltersCount = [filterCountry, filterEchelon, filterStatus, filterOperation].filter(Boolean).length;
+    const activeFiltersCount = [filterCountry, filterEchelon, filterStatus, filterOperation, filterHealth, filterEffectiveness].filter(Boolean).length;
+    const hasActiveFilters = activeFiltersCount > 0;
 
     // Get unique values for filters
     const countries = Array.from(new Set(units.map(u => u.country).filter(Boolean))).sort();
@@ -399,6 +437,32 @@ export default function Sidebar({ select }: any) {
                             ))}
                         </select>
 
+                        <select
+                            className="input"
+                            value={filterHealth}
+                            onChange={e => setFilterHealth(e.target.value)}
+                            style={{ width: '100%', fontSize: 11 }}
+                        >
+                            <option value="">All Health</option>
+                            <option value="Healthy">Healthy</option>
+                            <option value="Damaged">Damaged</option>
+                            <option value="Destroyed">Destroyed</option>
+                        </select>
+
+                        <select
+                            className="input"
+                            value={filterEffectiveness}
+                            onChange={e => setFilterEffectiveness(e.target.value)}
+                            style={{ width: '100%', fontSize: 11 }}
+                        >
+                            <option value="">All Effectiveness</option>
+                            <option value="effective">Effective (80–100%)</option>
+                            <option value="slightly-degraded">Slightly Degraded (70–79%)</option>
+                            <option value="degraded">Degraded (60–69%)</option>
+                            <option value="heavily-degraded">Heavily Degraded (40–59%)</option>
+                            <option value="combat-ineffective">Combat Ineffective (0–39%)</option>
+                        </select>
+
                         {activeFiltersCount > 0 && (
                             <button
                                 onClick={() => {
@@ -406,6 +470,8 @@ export default function Sidebar({ select }: any) {
                                     setFilterEchelon('');
                                     setFilterStatus('');
                                     setFilterOperation('');
+                                    setFilterHealth('');
+                                    setFilterEffectiveness('');
                                 }}
                                 style={{
                                     fontSize: 10,
@@ -427,6 +493,48 @@ export default function Sidebar({ select }: any) {
                 }}>
                     {filtered.length} of {units.filter(u => u.type !== 'Command').length} units
                 </div>
+
+                {activeFiltersCount > 0 && (
+                    <div style={{
+                        marginTop: 'var(--spacing-sm)',
+                        padding: '6px var(--spacing-sm)',
+                        background: 'var(--color-status-training)15',
+                        border: '1px solid var(--color-status-training)60',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 'var(--spacing-xs)'
+                    }}>
+                        <span style={{
+                            fontSize: 11,
+                            color: 'var(--color-status-training)',
+                            fontWeight: 600
+                        }}>
+                            {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active — {units.filter(u => u.type !== 'Command').length - filtered.length} hidden
+                        </span>
+                        <button
+                            onClick={() => {
+                                setFilterCountry('');
+                                setFilterEchelon('');
+                                setFilterStatus('');
+                                setFilterOperation('');
+                                setFilterHealth('');
+                                setFilterEffectiveness('');
+                            }}
+                            style={{
+                                fontSize: 9,
+                                padding: '2px 8px',
+                                background: 'var(--color-status-training)',
+                                borderColor: 'var(--color-status-training)',
+                                color: 'var(--color-bg-primary)',
+                                fontWeight: 600
+                            }}
+                        >
+                            CLEAR
+                        </button>
+                    </div>
+                )}
             </div>
 
             <div>
@@ -478,7 +586,7 @@ export default function Sidebar({ select }: any) {
                             </span>
                         </div>
 
-                        {expandedTypes.has(type) && typeUnits.map(u => renderUnit(u, 0, filtered))}
+                        {expandedTypes.has(type) && typeUnits.map(u => renderUnit(u, 0, filtered, hasActiveFilters))}
                     </div>
                 ))}
 

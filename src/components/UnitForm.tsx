@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../db';
 import type { Deployment } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { today, daysBetween } from '../utils';
+import { today, daysBetween, getEffectivenessInfo } from '../utils';
 
 function inferEchelon(name: string): string {
     const lower = name.toLowerCase();
@@ -26,6 +26,8 @@ export default function UnitForm({ unit, onDone }: any) {
     const [rtb, setRtb] = useState(unit?.lastRTBDate || '');
     const [parentId, setParentId] = useState(unit?.parentId || '');
     const [patch, setPatch] = useState(unit?.patch || '');
+    const [health, setHealth] = useState<'Healthy' | 'Damaged' | 'Destroyed'>(unit?.health || 'Healthy');
+    const [effectiveness, setEffectiveness] = useState<number>(unit?.effectiveness ?? 100);
     const [parentSearch, setParentSearch] = useState('');
     const [showParentDropdown, setShowParentDropdown] = useState(false);
 
@@ -125,6 +127,8 @@ export default function UnitForm({ unit, onDone }: any) {
             echelon,
             country: country || undefined,
             status,
+            health,
+            effectiveness,
             parentId: parentId || undefined,
             patch: patch || undefined,
             lastRTBDate: rtb || undefined,
@@ -241,6 +245,67 @@ export default function UnitForm({ unit, onDone }: any) {
                         <option>Training</option>
                         <option>Reset</option>
                     </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                            Health
+                        </label>
+                        <select
+                            className="input"
+                            value={health}
+                            onChange={e => setHealth(e.target.value as 'Healthy' | 'Damaged' | 'Destroyed')}
+                            style={{ width: '100%' }}
+                        >
+                            <option>Healthy</option>
+                            <option>Damaged</option>
+                            <option>Destroyed</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                            Effectiveness
+                        </label>
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-sm)'
+                        }}>
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                step={10}
+                                value={effectiveness}
+                                onChange={e => setEffectiveness(Number(e.target.value))}
+                                style={{
+                                    flex: 1,
+                                    accentColor: getEffectivenessInfo(effectiveness).color,
+                                    cursor: 'pointer'
+                                }}
+                            />
+                            <span style={{
+                                fontFamily: 'var(--font-mono)',
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: getEffectivenessInfo(effectiveness).color,
+                                minWidth: 38,
+                                textAlign: 'right'
+                            }}>
+                                {effectiveness}%
+                            </span>
+                        </div>
+                        <div style={{
+                            fontSize: 11,
+                            color: getEffectivenessInfo(effectiveness).color,
+                            marginTop: 4,
+                            fontWeight: 500
+                        }}>
+                            {getEffectivenessInfo(effectiveness).label}
+                        </div>
+                    </div>
                 </div>
 
                 <div>

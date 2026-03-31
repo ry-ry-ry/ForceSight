@@ -2,6 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import OverviewTab from './tabs/OverviewTab';
 import DeploymentsTab from './tabs/DeploymentsTab';
 import MissionsTab from './tabs/MissionsTab';
+import { getEffectivenessInfo, getHealthColor } from '../utils';
 
 const MapTab = lazy(() => import('./tabs/MapTab'));
 
@@ -50,6 +51,41 @@ export default function UnitPanel({ unit, onEdit, onSelectUnit }: any) {
                             }}>
                                 {unit.status}
                             </span>
+                            {unit.health && (
+                                <>
+                                    <span style={{ color: 'var(--color-text-muted)' }}>•</span>
+                                    <span style={{
+                                        padding: '4px 8px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        background: `${getHealthColor(unit.health)}20`,
+                                        color: getHealthColor(unit.health),
+                                        border: `1px solid ${getHealthColor(unit.health)}40`,
+                                        textTransform: 'uppercase',
+                                        fontWeight: 600,
+                                        fontSize: 11,
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        {unit.health}
+                                    </span>
+                                </>
+                            )}
+                            {unit.effectiveness !== undefined && (
+                                <>
+                                    <span style={{ color: 'var(--color-text-muted)' }}>•</span>
+                                    <span style={{
+                                        padding: '4px 8px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        background: `${getEffectivenessInfo(unit.effectiveness).color}20`,
+                                        color: getEffectivenessInfo(unit.effectiveness).color,
+                                        border: `1px solid ${getEffectivenessInfo(unit.effectiveness).color}40`,
+                                        fontWeight: 600,
+                                        fontSize: 11,
+                                        letterSpacing: '0.5px'
+                                    }}>
+                                        {unit.effectiveness}% — {getEffectivenessInfo(unit.effectiveness).label}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                     {unit.patch && (

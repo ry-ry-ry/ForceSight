@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db';
-import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare } from '../../utils';
+import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare, getEffectivenessInfo, getHealthColor } from '../../utils';
 import type { Unit } from '../../db';
 import React, { useState } from 'react';
 
@@ -1030,6 +1030,51 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                         <InfoRow label="Type" value={unit.type} />
                         {unit.echelon && <InfoRow label="Echelon" value={unit.echelon} />}
                         {unit.country && <InfoRow label="Country" value={unit.country} />}
+                        {unit.health && (
+                            <InfoRow
+                                label="Health"
+                                value={unit.health}
+                                valueColor={getHealthColor(unit.health)}
+                            />
+                        )}
+                        {unit.effectiveness !== undefined && (
+                            <div style={{
+                                padding: 'var(--spacing-sm)',
+                                background: 'var(--color-bg-tertiary)',
+                                borderRadius: 'var(--radius-sm)',
+                                fontSize: 13
+                            }}>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 6
+                                }}>
+                                    <span style={{ color: 'var(--color-text-secondary)' }}>Effectiveness</span>
+                                    <span style={{
+                                        fontWeight: 600,
+                                        fontFamily: 'var(--font-mono)',
+                                        color: getEffectivenessInfo(unit.effectiveness).color
+                                    }}>
+                                        {unit.effectiveness}% — {getEffectivenessInfo(unit.effectiveness).label}
+                                    </span>
+                                </div>
+                                <div style={{
+                                    height: 6,
+                                    background: 'var(--color-bg-primary)',
+                                    borderRadius: 3,
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        height: '100%',
+                                        width: `${unit.effectiveness}%`,
+                                        background: getEffectivenessInfo(unit.effectiveness).color,
+                                        borderRadius: 3,
+                                        transition: 'width 0.3s ease'
+                                    }} />
+                                </div>
+                            </div>
+                        )}
 
                         <div style={{ marginTop: 'var(--spacing-sm)' }}>
                             <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>

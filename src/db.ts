@@ -8,6 +8,8 @@ export interface Unit {
     echelon?: string;
     country?: string;
     status: string;
+    health?: 'Healthy' | 'Damaged' | 'Destroyed';
+    effectiveness?: number; // 0–100 in 10% increments
     parentId?: string;
     taskForceId?: string;
     lastRTBDate?: string;
@@ -129,6 +131,16 @@ class DB extends Dexie {
             taskForces: 'id, name, operationId'
         });
         this.version(7).stores({
+            units: 'id, name, parentId, echelon, country, taskForceId',
+            deployments: 'id, unitId, operationId',
+            operations: 'id, name, status, startDate',
+            missions: 'id, unitId, operationId',
+            taskForces: 'id, name, operationId',
+            mapIcons: 'id, name',
+            mapPins: 'id, name, iconId',
+            mapShapes: 'id, name, type'
+        });
+        this.version(8).stores({
             units: 'id, name, parentId, echelon, country, taskForceId',
             deployments: 'id, unitId, operationId',
             operations: 'id, name, status, startDate',

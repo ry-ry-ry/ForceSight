@@ -173,3 +173,35 @@ export function calculateRotationStatus(
         priority: 4
     };
 }
+
+// ── Health & Effectiveness ───────────────────────────────────────────
+
+export interface EffectivenessInfo {
+    label: string;
+    color: string;
+}
+
+/**
+ * Map a 0–100 effectiveness percentage to a category label and colour.
+ *   80–100  →  Effective
+ *   70–79   →  Slightly Degraded
+ *   60–69   →  Degraded
+ *   40–59   →  Heavily Degraded
+ *    0–39   →  Combat Ineffective
+ */
+export function getEffectivenessInfo(pct: number): EffectivenessInfo {
+    if (pct >= 80) return { label: 'Effective',           color: 'var(--color-status-standby)' };
+    if (pct >= 70) return { label: 'Slightly Degraded',   color: 'var(--color-accent-secondary)' };
+    if (pct >= 60) return { label: 'Degraded',            color: 'var(--color-status-training)' };
+    if (pct >= 40) return { label: 'Heavily Degraded',    color: 'var(--color-status-deployed)' };
+    return              { label: 'Combat Ineffective',    color: '#dc2626' };
+}
+
+export function getHealthColor(health: string): string {
+    switch (health) {
+        case 'Healthy':   return 'var(--color-status-standby)';
+        case 'Damaged':   return 'var(--color-status-training)';
+        case 'Destroyed': return '#dc2626';
+        default:          return 'var(--color-text-muted)';
+    }
+}
