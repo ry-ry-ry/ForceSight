@@ -1,4 +1,4 @@
-import { db } from '../db';
+import { db } from '../database/adapter';
 import { parseKML } from './kmlParser';
 import type { ParsedFeature } from './kmlParser';
 import { serializeCoordinates, serializeShapeStyle } from './mapDataHelpers';

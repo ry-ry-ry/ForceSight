@@ -1,10 +1,9 @@
 import { useState, useCallback } from 'react';
-import { db } from '../../db';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { db, useLiveData } from '../../database/adapter';
 import CesiumMap from '../CesiumMap';
 import CesiumTokenPrompt from '../CesiumTokenPrompt';
 import { hasCesiumToken } from '../../utils/cesiumToken';
-import type { Unit } from '../../db';
+import type { Unit } from '../../database/types';
 
 export default function MapTab({ unit }: { unit: Unit }) {
     const [tokenReady, setTokenReady] = useState(hasCesiumToken());
@@ -17,7 +16,7 @@ export default function MapTab({ unit }: { unit: Unit }) {
             : null
     );
 
-    const allUnits = useLiveQuery(() => db.units.toArray(), []);
+    const allUnits = useLiveData(() => db.units.toArray(), []);
 
     const handleClickLocation = useCallback(async (lat: number, lng: number) => {
         await db.units.update(unit.id, { locationLat: lat, locationLng: lng });

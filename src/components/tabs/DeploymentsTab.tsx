@@ -1,6 +1,5 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
-import type { Unit } from '../../db';
+import { db, useLiveData } from '../../database/adapter';
+import type { Unit } from '../../database/types';
 import { today, daysBetween, militaryNameCompare } from '../../utils';
 import { useState } from 'react';
 
@@ -8,13 +7,13 @@ export default function DeploymentsTab({ unit }: any) {
     const [editing, setEditing] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
 
-    const deployments = useLiveQuery(
+    const deployments = useLiveData(
         () => db.deployments.where('unitId').equals(unit.id).sortBy('startDate'),
         [unit.id]
     );
 
-    const operations = useLiveQuery(() => db.operations.toArray(), []);
-    const allUnits = useLiveQuery(() => db.units.toArray(), []);
+    const operations = useLiveData(() => db.operations.toArray(), []);
+    const allUnits = useLiveData(() => db.units.toArray(), []);
 
     const handleCreate = () => {
         setCreating(true);

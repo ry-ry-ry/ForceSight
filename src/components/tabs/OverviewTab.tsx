@@ -1,7 +1,6 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, useLiveData } from '../../database/adapter';
 import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare, getEffectivenessInfo, getHealthColor } from '../../utils';
-import type { Unit } from '../../db';
+import type { Unit } from '../../database/types';
 import React, { useState } from 'react';
 
 interface HierarchyNode {
@@ -28,13 +27,13 @@ interface HierarchySettings {
 }
 
 export default function OverviewTab({ unit, onSelectUnit }: any) {
-    const deployments = useLiveQuery(
+    const deployments = useLiveData(
         () => db.deployments.where('unitId').equals(unit.id).sortBy('startDate'),
         [unit.id]
     );
 
-    const allUnits = useLiveQuery(() => db.units.toArray(), []);
-    const taskForces = useLiveQuery(() => db.taskForces.toArray(), []);
+    const allUnits = useLiveData(() => db.units.toArray(), []);
+    const taskForces = useLiveData(() => db.taskForces.toArray(), []);
 
     const unitTaskForce = taskForces?.find(tf => tf.id === unit.taskForceId);
 

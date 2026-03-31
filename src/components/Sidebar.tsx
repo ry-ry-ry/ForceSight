@@ -1,7 +1,6 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { db, useLiveData } from '../database/adapter';
 import React, { useState } from 'react';
-import type { Unit } from '../db';
+import type { Unit } from '../database/types';
 import { militaryNameCompare } from '../utils';
 
 export default function Sidebar({ select }: any) {
@@ -19,9 +18,9 @@ export default function Sidebar({ select }: any) {
     const [filterHealth, setFilterHealth] = useState<string>('');
     const [filterEffectiveness, setFilterEffectiveness] = useState<string>('');
 
-    const units = useLiveQuery(() => db.units.toArray(), []);
-    const deployments = useLiveQuery(() => db.deployments.toArray(), []);
-    const operations = useLiveQuery(() => db.operations.toArray(), []);
+    const units = useLiveData(() => db.units.toArray(), []);
+    const deployments = useLiveData(() => db.deployments.toArray(), []);
+    const operations = useLiveData(() => db.operations.toArray(), []);
 
     const toggleType = (type: string) => {
         const newExpanded = new Set(expandedTypes);

@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { db, useLiveData } from '../database/adapter';
 import CesiumMap from './CesiumMap';
 import CesiumTokenPrompt from './CesiumTokenPrompt';
 import MapSidebar from './map/MapSidebar';
@@ -40,10 +39,10 @@ export default function MapPage({ onSelectUnit }: { onSelectUnit?: (u: any) => v
         showShapes: true
     });
 
-    const allUnits = useLiveQuery(() => db.units.toArray(), []);
-    const mapPins = useLiveQuery(() => db.mapPins.toArray(), []);
-    const mapShapes = useLiveQuery(() => db.mapShapes.toArray(), []);
-    const mapIcons = useLiveQuery(() => db.mapIcons.toArray(), []);
+    const allUnits = useLiveData(() => db.units.toArray(), []);
+    const mapPins = useLiveData(() => db.mapPins.toArray(), []);
+    const mapShapes = useLiveData(() => db.mapShapes.toArray(), []);
+    const mapIcons = useLiveData(() => db.mapIcons.toArray(), []);
 
     const handleLayerToggle = useCallback((key: string, value: boolean) => {
         setLayers(prev => ({ ...prev, [key]: value }));

@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, useLiveData } from '../../database/adapter';
 
 interface MapSidebarProps {
     collapsed: boolean;
@@ -44,9 +43,9 @@ export default function MapSidebar({
 }: MapSidebarProps) {
     const [expandedPanel, setExpandedPanel] = useState<string>('layers');
 
-    const allUnits = useLiveQuery(() => db.units.toArray(), []);
-    const mapPins = useLiveQuery(() => db.mapPins.toArray(), []);
-    const mapShapes = useLiveQuery(() => db.mapShapes.toArray(), []);
+    const allUnits = useLiveData(() => db.units.toArray(), []);
+    const mapPins = useLiveData(() => db.mapPins.toArray(), []);
+    const mapShapes = useLiveData(() => db.mapShapes.toArray(), []);
 
     const unitsWithLocation = allUnits?.filter(u => u.locationLat != null && u.locationLng != null) || [];
 

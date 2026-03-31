@@ -1,11 +1,10 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { db, useLiveData } from '../database/adapter';
 import { useEffect, useState } from 'react';
 import { calculateRotationStatus } from '../utils';
 
 export default function Dashboard({ onSelectUnit }: any) {
-    const units = useLiveQuery(() => db.units.toArray(), []);
-    const deployments = useLiveQuery(() => db.deployments.toArray(), []);
+    const units = useLiveData(() => db.units.toArray(), []);
+    const deployments = useLiveData(() => db.deployments.toArray(), []);
     const [time, setTime] = useState(new Date());
 
     useEffect(() => {

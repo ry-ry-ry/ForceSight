@@ -1,5 +1,4 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db';
+import { db, useLiveData } from '../../database/adapter';
 import { today, daysBetween } from '../../utils';
 import { useState } from 'react';
 
@@ -7,12 +6,12 @@ export default function MissionsTab({ unit }: any) {
     const [editing, setEditing] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
 
-    const missions = useLiveQuery(
+    const missions = useLiveData(
         () => db.missions.where('unitId').equals(unit.id).sortBy('startDate'),
         [unit.id]
     );
 
-    const operations = useLiveQuery(() => db.operations.toArray(), []);
+    const operations = useLiveData(() => db.operations.toArray(), []);
 
     const handleCreate = () => {
         setCreating(true);

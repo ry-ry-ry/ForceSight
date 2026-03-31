@@ -1,13 +1,12 @@
 import { useState, useCallback } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { db, useLiveData } from '../database/adapter';
 
 interface MapIconManagerProps {
     onClose: () => void;
 }
 
 export default function MapIconManager({ onClose }: MapIconManagerProps) {
-    const mapIcons = useLiveQuery(() => db.mapIcons.toArray(), []);
+    const mapIcons = useLiveData(() => db.mapIcons.toArray(), []);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
 
@@ -49,7 +48,8 @@ export default function MapIconManager({ onClose }: MapIconManagerProps) {
 
     const handleDelete = useCallback(async (id: string) => {
         // Check if any pins use this icon
-        const pinsUsing = await db.mapPins.where('iconId').equals(id).count();
+        const pinsUsingArr = await db.mapPins.where('iconId').equals(id).toArray();
+        const pinsUsing = pinsUsingArr.length;
         if (pinsUsing > 0) {
             if (!confirm(`${pinsUsing} pin(s) use this icon. They will revert to the default pin. Delete anyway?`)) {
                 return;

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { db } from '../db';
-import type { Deployment } from '../db';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { db, useLiveData } from '../database/adapter';
+import type { Deployment } from '../database/types';
 import { today, daysBetween, getEffectivenessInfo } from '../utils';
 
 function inferEchelon(name: string): string {
@@ -31,10 +30,10 @@ export default function UnitForm({ unit, onDone }: any) {
     const [parentSearch, setParentSearch] = useState('');
     const [showParentDropdown, setShowParentDropdown] = useState(false);
 
-    const allUnits = useLiveQuery(() => db.units.toArray(), []);
+    const allUnits = useLiveData(() => db.units.toArray(), []);
 
     // Deployments belonging to the currently-selected parent unit
-    const parentDeployments = useLiveQuery(
+    const parentDeployments = useLiveData(
         () => parentId
             ? db.deployments.where('unitId').equals(parentId).sortBy('startDate')
             : Promise.resolve([] as Deployment[]),

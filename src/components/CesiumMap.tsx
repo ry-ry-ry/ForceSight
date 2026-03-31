@@ -3,7 +3,7 @@ import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import { getCesiumToken } from '../utils/cesiumToken';
 import { parseCoordinates, parseShapeStyle, hexToRgba } from '../utils/mapDataHelpers';
-import type { Unit, MapPin, MapShape, MapIcon } from '../db';
+import type { Unit, MapPin, MapShape, MapIcon } from '../database/types';
 
 const DEFAULT_PIN_SVG = `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40"><path d="M16 0C7.2 0 0 7.2 0 16c0 12 16 24 16 24s16-12 16-24C32 7.2 24.8 0 16 0zm0 22a6 6 0 110-12 6 6 0 010 12z" fill="#00d9ff"/></svg>`)}`;
 const DARK_TILES_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';

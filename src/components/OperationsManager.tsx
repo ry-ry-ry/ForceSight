@@ -1,5 +1,4 @@
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { db, useLiveData } from '../database/adapter';
 import { useState } from 'react';
 import { today } from '../utils';
 
@@ -10,10 +9,13 @@ export default function OperationsManager({ onSelectUnit }: any) {
     const [creatingTaskForce, setCreatingTaskForce] = useState(false);
     const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
 
-    const operations = useLiveQuery(() => db.operations.orderBy('startDate').reverse().toArray(), []);
-    const units = useLiveQuery(() => db.units.toArray(), []);
-    const deployments = useLiveQuery(() => db.deployments.toArray(), []);
-    const taskForces = useLiveQuery(() => db.taskForces.toArray(), []);
+    const operations = useLiveData(async () => {
+        const ops = await db.operations.orderBy('startDate').toArray();
+        return ops.reverse();
+    }, []);
+    const units = useLiveData(() => db.units.toArray(), []);
+    const deployments = useLiveData(() => db.deployments.toArray(), []);
+    const taskForces = useLiveData(() => db.taskForces.toArray(), []);
 
     const handleCreate = () => {
         setCreating(true);
