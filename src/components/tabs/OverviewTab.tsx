@@ -26,7 +26,7 @@ interface HierarchySettings {
     posterFooterColor: string;
 }
 
-export default function OverviewTab({ unit, onSelectUnit }: any) {
+export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: any) {
     const deployments = useLiveData(
         () => db.deployments.where('unitId').equals(unit.id).sortBy('startDate'),
         [unit.id]
@@ -1139,6 +1139,21 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                                 </div>
                             )}
                         </div>
+
+                        {onAddSubordinate && (
+                            <button
+                                onClick={() => onAddSubordinate(unit)}
+                                style={{
+                                    width: '100%',
+                                    marginTop: 'var(--spacing-md)',
+                                    background: 'var(--color-bg-elevated)',
+                                    borderColor: 'var(--color-border-accent)',
+                                    fontSize: 12,
+                                }}
+                            >
+                                + Add Subordinate Unit
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -1276,9 +1291,16 @@ export default function OverviewTab({ unit, onSelectUnit }: any) {
                 <div className="card">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
                         <h3 style={{ margin: 0 }}>Subordinate Units</h3>
-                        <button onClick={() => setShowHierarchyDialog(true)} style={{ fontSize: 11, padding: '4px 8px' }}>
-                            Generate Hierarchy Image
-                        </button>
+                        <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
+                            {onAddSubordinate && (
+                                <button onClick={() => onAddSubordinate(unit)} style={{ fontSize: 11, padding: '4px 8px' }}>
+                                    + Add Subordinate
+                                </button>
+                            )}
+                            <button onClick={() => setShowHierarchyDialog(true)} style={{ fontSize: 11, padding: '4px 8px' }}>
+                                Generate Hierarchy Image
+                            </button>
+                        </div>
                     </div>
                     <div style={{ marginTop: 'var(--spacing-lg)' }}>
                         <div

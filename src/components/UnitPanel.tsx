@@ -6,7 +6,7 @@ import { getEffectivenessInfo, getHealthColor } from '../utils';
 
 const MapTab = lazy(() => import('./tabs/MapTab'));
 
-export default function UnitPanel({ unit, onEdit, onSelectUnit }: any) {
+export default function UnitPanel({ unit, onEdit, onSelectUnit, onAddSubordinate }: any) {
     const [tab, setTab] = useState<'overview' | 'deployments' | 'missions' | 'map'>('overview');
 
     return (
@@ -157,7 +157,7 @@ export default function UnitPanel({ unit, onEdit, onSelectUnit }: any) {
             </div>
 
             {/* TAB CONTENT */}
-            {tab === 'overview' && <OverviewTab unit={unit} onSelectUnit={onSelectUnit} />}
+            {tab === 'overview' && <OverviewTab unit={unit} onSelectUnit={onSelectUnit} onAddSubordinate={onAddSubordinate} />}
             {tab === 'deployments' && <DeploymentsTab unit={unit} />}
             {tab === 'missions' && <MissionsTab unit={unit} />}
             {tab === 'map' && (

@@ -16,14 +16,14 @@ function inferEchelon(name: string): string {
     return 'Battalion'; // default
 }
 
-export default function UnitForm({ unit, onDone }: any) {
+export default function UnitForm({ unit, defaults, onDone }: any) {
     const [name, setName] = useState(unit?.name || '');
     const [type, setType] = useState(unit?.type || 'Ground');
     const [echelon, setEchelon] = useState(unit?.echelon || 'Battalion');
-    const [country, setCountry] = useState(unit?.country || '');
+    const [country, setCountry] = useState(unit?.country || defaults?.country || '');
     const [status, setStatus] = useState(unit?.status || 'Standby');
     const [rtb, setRtb] = useState(unit?.lastRTBDate || '');
-    const [parentId, setParentId] = useState(unit?.parentId || '');
+    const [parentId, setParentId] = useState(unit?.parentId || defaults?.parentId || '');
     const [patch, setPatch] = useState(unit?.patch || '');
     const [health, setHealth] = useState<'Healthy' | 'Damaged' | 'Destroyed'>(unit?.health || 'Healthy');
     const [effectiveness, setEffectiveness] = useState<number>(unit?.effectiveness ?? 100);

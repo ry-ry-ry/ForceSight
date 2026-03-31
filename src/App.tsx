@@ -16,6 +16,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('dashboard');
   const [currentTheme, setCurrentTheme] = useState(getStoredTheme);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [createDefaults, setCreateDefaults] = useState<any>(null);
 
   useEffect(() => {
     applyTheme(currentTheme);
@@ -108,7 +109,7 @@ export default function App() {
           >
             🌐 Map
           </button>
-          <button onClick={() => setMode('create')}>+ New Unit</button>
+          <button onClick={() => { setCreateDefaults(null); setMode('create'); }}>+ New Unit</button>
           <div style={{ flex: 1 }} />
           <button
             onClick={() => setSettingsOpen(true)}
@@ -154,7 +155,7 @@ export default function App() {
 
             {mode === 'create' && (
               <div className="animate-fade-in">
-                <UnitForm onDone={() => setMode('dashboard')} />
+                <UnitForm defaults={createDefaults} onDone={() => { setCreateDefaults(null); setMode('dashboard'); }} />
               </div>
             )}
 
@@ -172,6 +173,13 @@ export default function App() {
                   onSelectUnit={(u: any) => {
                     setSelected(u);
                     setMode('view');
+                  }}
+                  onAddSubordinate={(parentUnit: any) => {
+                    setCreateDefaults({
+                      parentId: parentUnit.id,
+                      country: parentUnit.country || '',
+                    });
+                    setMode('create');
                   }}
                 />
               </div>
