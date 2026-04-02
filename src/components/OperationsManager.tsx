@@ -763,6 +763,9 @@ function TaskForceCard({ taskForce, units, onEdit, onDelete, onSelectUnit }: any
                                 key={unit.id}
                                 onClick={() => onSelectUnit(unit)}
                                 style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 'var(--spacing-xs)',
                                     fontSize: 10,
                                     padding: '3px 6px',
                                     background: 'var(--color-bg-tertiary)',
@@ -778,7 +781,20 @@ function TaskForceCard({ taskForce, units, onEdit, onDelete, onSelectUnit }: any
                                     e.currentTarget.style.borderColor = 'var(--color-border-primary)';
                                 }}
                             >
-                                {unit.name}
+                                {getEffectivePatch(unit, units) && (
+                                    <img
+                                        src={getEffectivePatch(unit, units)}
+                                        alt={unit.name}
+                                        style={{
+                                            width: 16,
+                                            height: 16,
+                                            objectFit: 'contain',
+                                            borderRadius: 2,
+                                            border: '1px solid var(--color-border-accent)'
+                                        }}
+                                    />
+                                )}
+                                <span>{unit.name}</span>
                             </div>
                         ))}
                     </div>
