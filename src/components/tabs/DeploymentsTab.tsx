@@ -1,6 +1,6 @@
 import { db, useLiveData } from '../../database/adapter';
 import type { Unit } from '../../database/types';
-import { today, daysBetween, militaryNameCompare } from '../../utils';
+import { today, daysBetween, militaryNameCompare, getEffectivePatch } from '../../utils';
 import { useState } from 'react';
 
 export default function DeploymentsTab({ unit }: any) {
@@ -256,9 +256,9 @@ function SubordinateTree({ parentId, allUnits, selectedIds, onToggle, depth = 0 
                                 style={{ accentColor: 'var(--color-accent-primary)', flexShrink: 0 }}
                             />
                             <span style={{ color: 'var(--color-accent-primary)', fontSize: 12, flexShrink: 0 }}>└─</span>
-                            {sub.patch && (
+                            {getEffectivePatch(sub, allUnits) && (
                                 <img
-                                    src={sub.patch}
+                                    src={getEffectivePatch(sub, allUnits)}
                                     alt={`${sub.name} patch`}
                                     style={{
                                         width: 28,

@@ -154,6 +154,7 @@ export default function MapPage({ onSelectUnit }: { onSelectUnit?: (u: any) => v
             <div style={{ flex: 1, position: 'relative' }}>
                 <CesiumMap
                     units={layers.showUnits ? allUnits : undefined}
+                    allUnits={allUnits}
                     mapPins={layers.showPins ? mapPins : undefined}
                     mapShapes={layers.showShapes ? mapShapes : undefined}
                     mapIcons={mapIcons}

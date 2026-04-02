@@ -1,5 +1,5 @@
 import { db, useLiveData } from '../../database/adapter';
-import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare, getEffectivenessInfo, getHealthColor } from '../../utils';
+import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare, getEffectivenessInfo, getHealthColor, getEffectivePatch } from '../../utils';
 import type { Unit } from '../../database/types';
 import React, { useState } from 'react';
 
@@ -144,9 +144,9 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                             }}
                         >
                             <span style={{ color: 'var(--color-accent-primary)', fontSize: 12 }}>└─</span>
-                            {sub.patch && (
+                            {getEffectivePatch(sub, allUnits) && (
                                 <img
-                                    src={sub.patch}
+                                    src={getEffectivePatch(sub, allUnits)}
                                     alt={`${sub.name} patch`}
                                     style={{
                                         width: 32,
@@ -200,9 +200,9 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                         }}
                     >
                         <span style={{ color: 'var(--color-accent-primary)', fontSize: 12 }}>└─</span>
-                        {sub.patch && (
+                        {getEffectivePatch(sub, allUnits) && (
                             <img
-                                src={sub.patch}
+                                src={getEffectivePatch(sub, allUnits)}
                                 alt={`${sub.name} patch`}
                                 style={{
                                     width: 32,

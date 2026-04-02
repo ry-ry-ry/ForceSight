@@ -205,3 +205,33 @@ export function getHealthColor(health: string): string {
         default:          return 'var(--color-text-muted)';
     }
 }
+
+// ── Unit Patch Inheritance ───────────────────────────────────────────
+
+import type { Unit } from './database/types';
+
+/**
+ * Get the effective patch for a unit, inheriting from parent chain if needed.
+ * Returns the unit's own patch if it has one, otherwise walks up the parent
+ * chain to find the first ancestor with a patch.
+ */
+export function getEffectivePatch(unit: Unit, allUnits: Unit[] | undefined): string | undefined {
+    if (!allUnits) return unit.patch;
+    if (unit.patch) return unit.patch;
+
+    let current = unit;
+    const visited = new Set<string>([current.id]);
+
+    while (current.parentId) {
+        if (visited.has(current.parentId)) break; // Prevent cycles
+        visited.add(current.parentId);
+
+        const parent = allUnits.find(u => u.id === current.parentId);
+        if (!parent) break;
+
+        if (parent.patch) return parent.patch;
+        current = parent;
+    }
+
+    return undefined;
+}

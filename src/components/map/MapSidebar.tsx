@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { db, useLiveData } from '../../database/adapter';
+import { getEffectivePatch } from '../../utils';
 
 interface MapSidebarProps {
     collapsed: boolean;
@@ -199,8 +200,8 @@ export default function MapSidebar({
                                     onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg-tertiary)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                 >
-                                    {unit.patch && (
-                                        <img src={unit.patch} alt="" style={{ width: 20, height: 20, borderRadius: 2, objectFit: 'contain' }} />
+                                    {getEffectivePatch(unit, allUnits) && (
+                                        <img src={getEffectivePatch(unit, allUnits)} alt="" style={{ width: 20, height: 20, borderRadius: 2, objectFit: 'contain' }} />
                                     )}
                                     <div style={{ flex: 1, overflow: 'hidden' }}>
                                         <div style={{ fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{unit.name}</div>

@@ -2,12 +2,14 @@ import { useState, lazy, Suspense } from 'react';
 import OverviewTab from './tabs/OverviewTab';
 import DeploymentsTab from './tabs/DeploymentsTab';
 import MissionsTab from './tabs/MissionsTab';
-import { getEffectivenessInfo, getHealthColor } from '../utils';
+import { getEffectivenessInfo, getHealthColor, getEffectivePatch } from '../utils';
+import { db, useLiveData } from '../database/adapter';
 
 const MapTab = lazy(() => import('./tabs/MapTab'));
 
 export default function UnitPanel({ unit, onEdit, onSelectUnit, onAddSubordinate }: any) {
     const [tab, setTab] = useState<'overview' | 'deployments' | 'missions' | 'map'>('overview');
+    const allUnits = useLiveData(() => db.units.toArray(), []);
 
     return (
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -88,9 +90,9 @@ export default function UnitPanel({ unit, onEdit, onSelectUnit, onAddSubordinate
                             )}
                         </div>
                     </div>
-                    {unit.patch && (
+                    {getEffectivePatch(unit, allUnits) && (
                         <img
-                            src={unit.patch}
+                            src={getEffectivePatch(unit, allUnits)}
                             alt={`${unit.name} patch`}
                             style={{
                                 width: 100,

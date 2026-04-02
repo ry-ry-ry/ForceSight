@@ -1,6 +1,6 @@
 import { db, useLiveData } from '../database/adapter';
 import { useEffect, useState } from 'react';
-import { calculateRotationStatus } from '../utils';
+import { calculateRotationStatus, getEffectivePatch } from '../utils';
 
 export default function Dashboard({ onSelectUnit }: any) {
     const units = useLiveData(() => db.units.toArray(), []);
@@ -226,9 +226,9 @@ export default function Dashboard({ onSelectUnit }: any) {
                                         e.currentTarget.style.transform = 'translateX(0)';
                                     }}
                                 >
-                                    {unit.patch && (
+                                    {getEffectivePatch(unit, units) && (
                                         <img
-                                            src={unit.patch}
+                                            src={getEffectivePatch(unit, units)}
                                             alt={unit.name}
                                             style={{
                                                 width: 40,
@@ -459,9 +459,9 @@ function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUn
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-                {unit.patch && (
+                {getEffectivePatch(unit, allUnits) && (
                     <img
-                        src={unit.patch}
+                        src={getEffectivePatch(unit, allUnits)}
                         alt={unit.name}
                         style={{
                             width: 48,

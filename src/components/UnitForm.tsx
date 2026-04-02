@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { db, useLiveData } from '../database/adapter';
 import type { Deployment } from '../database/types';
-import { today, daysBetween, getEffectivenessInfo } from '../utils';
+import { today, daysBetween, getEffectivenessInfo, getEffectivePatch } from '../utils';
 
 function inferEchelon(name: string): string {
     const lower = name.toLowerCase();
@@ -329,9 +329,9 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                                     gap: 'var(--spacing-sm)'
                                 }}
                             >
-                                {selectedParent.patch && (
+                                {getEffectivePatch(selectedParent, allUnits) && (
                                     <img
-                                        src={selectedParent.patch}
+                                        src={getEffectivePatch(selectedParent, allUnits)}
                                         alt={selectedParent.name}
                                         style={{
                                             width: 24,
@@ -416,9 +416,9 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                                                     e.currentTarget.style.background = 'transparent';
                                                 }}
                                             >
-                                                {u.patch && (
+                                                {getEffectivePatch(u, allUnits) && (
                                                     <img
-                                                        src={u.patch}
+                                                        src={getEffectivePatch(u, allUnits)}
                                                         alt={u.name}
                                                         style={{
                                                             width: 24,

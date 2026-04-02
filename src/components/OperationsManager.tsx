@@ -1,6 +1,6 @@
 import { db, useLiveData } from '../database/adapter';
 import { useState } from 'react';
-import { today } from '../utils';
+import { today, getEffectivePatch } from '../utils';
 
 export default function OperationsManager({ onSelectUnit }: any) {
     const [editing, setEditing] = useState<string | null>(null);
@@ -511,9 +511,9 @@ function OperationCard({ operation, units, deployments, taskForces, onEdit, onDe
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-                                        {unit.patch && (
+                                        {getEffectivePatch(unit, units) && (
                                             <img
-                                                src={unit.patch}
+                                                src={getEffectivePatch(unit, units)}
                                                 alt={unit.name}
                                                 style={{
                                                     width: 32,
@@ -915,9 +915,9 @@ function TaskForceForm({ taskForce, operationId, units, onDone }: any) {
                                             checked={selectedUnits.includes(unit.id)}
                                             onChange={() => toggleUnit(unit.id)}
                                         />
-                                        {unit.patch && (
+                                        {getEffectivePatch(unit, units) && (
                                             <img
-                                                src={unit.patch}
+                                                src={getEffectivePatch(unit, units)}
                                                 alt={unit.name}
                                                 style={{
                                                     width: 24,

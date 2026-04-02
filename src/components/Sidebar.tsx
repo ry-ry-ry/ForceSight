@@ -1,7 +1,7 @@
 import { db, useLiveData } from '../database/adapter';
 import React, { useState } from 'react';
 import type { Unit } from '../database/types';
-import { militaryNameCompare } from '../utils';
+import { militaryNameCompare, getEffectivePatch } from '../utils';
 
 export default function Sidebar({ select }: any) {
     const [search, setSearch] = useState('');
@@ -254,9 +254,9 @@ export default function Sidebar({ select }: any) {
                     )}
                     {!hasChildren && <span style={{ width: 16 }} />}
 
-                    {u.patch && (
+                    {getEffectivePatch(u, units) && (
                         <img
-                            src={u.patch}
+                            src={getEffectivePatch(u, units)}
                             alt={`${u.name} patch`}
                             style={{
                                 width: 32,

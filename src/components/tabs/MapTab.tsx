@@ -3,6 +3,7 @@ import { db, useLiveData } from '../../database/adapter';
 import CesiumMap from '../CesiumMap';
 import CesiumTokenPrompt from '../CesiumTokenPrompt';
 import { hasCesiumToken } from '../../utils/cesiumToken';
+import { getEffectivePatch } from '../../utils';
 import type { Unit } from '../../database/types';
 
 export default function MapTab({ unit }: { unit: Unit }) {
@@ -81,6 +82,7 @@ export default function MapTab({ unit }: { unit: Unit }) {
             }}>
                 <CesiumMap
                     units={unitsToShow}
+                    allUnits={allUnits}
                     selectedUnitId={unit.id}
                     onClickLocation={handleClickLocation}
                     flyToTarget={flyToTarget}
@@ -136,7 +138,7 @@ export default function MapTab({ unit }: { unit: Unit }) {
                                     onMouseEnter={e => { if (u.id !== unit.id) e.currentTarget.style.background = 'var(--color-bg-tertiary)'; }}
                                     onMouseLeave={e => { if (u.id !== unit.id) e.currentTarget.style.background = 'transparent'; }}
                                 >
-                                    {u.patch && <img src={u.patch} alt="" style={{ width: 20, height: 20, borderRadius: 2, objectFit: 'contain' }} />}
+                                    {getEffectivePatch(u, allUnits) && <img src={getEffectivePatch(u, allUnits)} alt="" style={{ width: 20, height: 20, borderRadius: 2, objectFit: 'contain' }} />}
                                     <span style={{ flex: 1 }}>{u.name}</span>
                                     <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-text-muted)', fontSize: 10 }}>
                                         {u.locationLat!.toFixed(4)}, {u.locationLng!.toFixed(4)}
