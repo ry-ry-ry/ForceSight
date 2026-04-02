@@ -35,7 +35,14 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
     const allUnits = useLiveData(() => db.units.toArray(), []);
     const taskForces = useLiveData(() => db.taskForces.toArray(), []);
 
-    const unitTaskForce = taskForces?.find(tf => tf.id === unit.taskForceId);
+    // Get live updates of the current unit to reflect changes from other components
+    const liveUnit = useLiveData(
+        () => db.units.get(unit.id),
+        [unit.id]
+    );
+    const currentUnit = liveUnit || unit;
+
+    const unitTaskForce = taskForces?.find(tf => tf.id === currentUnit.taskForceId);
 
     const [showHierarchyDialog, setShowHierarchyDialog] = useState(false);
     const [hierarchySettings, setHierarchySettings] = useState<HierarchySettings>({
@@ -1081,7 +1088,7 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                             </label>
                             <select
                                 className="input"
-                                value={unit.taskForceId || ''}
+                                value={currentUnit.taskForceId || ''}
                                 onChange={e => handleTaskForceChange(e.target.value)}
                                 style={{ width: '100%' }}
                             >
