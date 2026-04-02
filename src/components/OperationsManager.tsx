@@ -188,7 +188,9 @@ function OperationCard({ operation, units, deployments, taskForces, onEdit, onDe
     const [showAssignMenu, setShowAssignMenu] = useState(false);
 
     const assignedDeployments = deployments?.filter((d: any) => d.operationId === operation.id) || [];
-    const assignedUnits = assignedDeployments.map((d: any) =>
+    // Only show units with ACTIVE deployments (no end date) in the Assigned Units section
+    const activeDeployments = assignedDeployments.filter((d: any) => !d.endDate);
+    const assignedUnits = activeDeployments.map((d: any) =>
         units?.find((u: any) => u.id === d.unitId)
     ).filter(Boolean);
 
