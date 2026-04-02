@@ -129,6 +129,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
             health,
             effectiveness,
             parentId: parentId || undefined,
+            taskForceId: unit?.taskForceId || undefined,
             patch: patch || undefined,
             lastRTBDate: rtb || undefined,
             createdAt: unit?.createdAt || now
