@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import Sidebar from './components/Sidebar';
 import UnitPanel from './components/UnitPanel';
 import UnitForm from './components/UnitForm';
@@ -6,21 +6,115 @@ import Dashboard from './components/Dashboard';
 import OperationsManager from './components/OperationsManager';
 import SettingsDialog from './components/SettingsDialog';
 import { getStoredTheme, applyTheme } from './theme';
+import { db } from './database/adapter';
 
 const MapPage = lazy(() => import('./components/MapPage'));
 
 type Mode = 'dashboard' | 'operations' | 'map' | 'view' | 'create' | 'edit';
 
+// Parse URL hash to get mode and unit id
+function parseHash(): { mode: Mode; unitId: string | null } {
+  const hash = window.location.hash.slice(1); // Remove #
+  if (!hash) return { mode: 'dashboard', unitId: null };
+
+  const [modePart, idPart] = hash.split('/');
+  const validModes: Mode[] = ['dashboard', 'operations', 'map', 'view', 'create', 'edit'];
+
+  if (validModes.includes(modePart as Mode)) {
+    return { mode: modePart as Mode, unitId: idPart || null };
+  }
+  return { mode: 'dashboard', unitId: null };
+}
+
+// Update URL hash
+function updateHash(mode: Mode, unitId?: string | null) {
+  const newHash = unitId ? `${mode}/${unitId}` : mode;
+  // Only update if different to avoid extra history entries
+  if (window.location.hash.slice(1) !== newHash) {
+    window.history.pushState(null, '', `#${newHash}`);
+  }
+}
+
 export default function App() {
   const [selected, setSelected] = useState<any>(null);
-  const [mode, setMode] = useState<Mode>('dashboard');
+  const [mode, setModeState] = useState<Mode>('dashboard');
   const [currentTheme, setCurrentTheme] = useState(getStoredTheme);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [createDefaults, setCreateDefaults] = useState<any>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  // Wrapper for setMode that also updates URL
+  const setMode = useCallback((newMode: Mode) => {
+    setModeState(newMode);
+    updateHash(newMode, selected?.id);
+  }, [selected?.id]);
+
+  // Wrapper for selecting a unit and switching to view mode
+  const selectUnit = useCallback((u: any) => {
+    setSelected(u);
+    setModeState('view');
+    updateHash('view', u?.id);
+  }, []);
 
   useEffect(() => {
     applyTheme(currentTheme);
   }, [currentTheme]);
+
+  // Restore state from URL hash on initial load
+  useEffect(() => {
+    const restoreFromHash = async () => {
+      const { mode: hashMode, unitId } = parseHash();
+
+      if (unitId) {
+        try {
+          const unit = await db.units.get(unitId);
+          if (unit) {
+            setSelected(unit);
+            setModeState(hashMode);
+          } else {
+            // Unit not found, go to dashboard
+            setModeState('dashboard');
+          }
+        } catch {
+          setModeState('dashboard');
+        }
+      } else {
+        setModeState(hashMode);
+      }
+      setInitialized(true);
+    };
+
+    restoreFromHash();
+  }, []);
+
+  // Listen for browser back/forward navigation
+  useEffect(() => {
+    const handlePopState = async () => {
+      const { mode: hashMode, unitId } = parseHash();
+
+      if (unitId) {
+        try {
+          const unit = await db.units.get(unitId);
+          if (unit) {
+            setSelected(unit);
+            setModeState(hashMode);
+          } else {
+            setSelected(null);
+            setModeState('dashboard');
+          }
+        } catch {
+          setSelected(null);
+          setModeState('dashboard');
+        }
+      } else {
+        setSelected(null);
+        setModeState(hashMode);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Dynamic page title
   useEffect(() => {
@@ -55,14 +149,20 @@ export default function App() {
 
   const isMapMode = mode === 'map';
 
+  // Don't render until we've restored state from URL
+  if (!initialized) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-primary)' }}>
+        <div style={{ color: 'var(--color-text-muted)', fontSize: 14 }}>Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', height: '100vh', position: 'relative' }}>
 
       <Sidebar
-        select={(u: any) => {
-          setSelected(u);
-          setMode('view');
-        }}
+        select={selectUnit}
       />
 
       <div style={{ flex: 1, overflowY: isMapMode ? 'hidden' : 'auto', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -131,26 +231,17 @@ export default function App() {
                 Loading map...
               </div>
             }>
-              <MapPage onSelectUnit={(u: any) => {
-                setSelected(u);
-                setMode('view');
-              }} />
+              <MapPage onSelectUnit={selectUnit} />
             </Suspense>
           </div>
         ) : (
           <div style={{ padding: 'var(--spacing-lg)', flex: 1 }}>
             {mode === 'dashboard' && (
-              <Dashboard onSelectUnit={(u: any) => {
-                setSelected(u);
-                setMode('view');
-              }} />
+              <Dashboard onSelectUnit={selectUnit} />
             )}
 
             {mode === 'operations' && (
-              <OperationsManager onSelectUnit={(u: any) => {
-                setSelected(u);
-                setMode('view');
-              }} />
+              <OperationsManager onSelectUnit={selectUnit} />
             )}
 
             {mode === 'create' && (
@@ -170,10 +261,7 @@ export default function App() {
                 <UnitPanel
                   unit={selected}
                   onEdit={() => setMode('edit')}
-                  onSelectUnit={(u: any) => {
-                    setSelected(u);
-                    setMode('view');
-                  }}
+                  onSelectUnit={selectUnit}
                   onAddSubordinate={(parentUnit: any) => {
                     setCreateDefaults({
                       parentId: parentUnit.id,
