@@ -9,6 +9,11 @@ export default function OperationsManager({ onSelectUnit }: any) {
     const [creatingTaskForce, setCreatingTaskForce] = useState(false);
     const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
 
+    // Filters
+    const [searchQuery, setSearchQuery] = useState('');
+    const [hideCompleted, setHideCompleted] = useState(true);
+    const [statusFilter, setStatusFilter] = useState<string>('');
+
     const operations = useLiveData(async () => {
         const ops = await db.operations.orderBy('startDate').toArray();
         return ops.reverse();
@@ -53,6 +58,25 @@ export default function OperationsManager({ onSelectUnit }: any) {
 
     const unassignedTaskForces = taskForces?.filter(tf => !tf.operationId) || [];
 
+    const filteredOperations = operations?.filter(op => {
+        if (searchQuery && !op.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+            return false;
+        }
+        if (hideCompleted && op.status === 'Completed') {
+            return false;
+        }
+        if (statusFilter && op.status !== statusFilter) {
+            return false;
+        }
+        return true;
+    });
+
+    const activeFiltersCount = [
+        searchQuery,
+        hideCompleted,
+        statusFilter
+    ].filter(Boolean).length;
+
     return (
         <div style={{ padding: 'var(--spacing-2xl)', maxWidth: 1400, margin: '0 auto' }}>
 
@@ -83,6 +107,80 @@ export default function OperationsManager({ onSelectUnit }: any) {
                 <div className="tactical-divider"></div>
             </div>
 
+            {/* Filters */}
+            <div className="card animate-fade-in" style={{ marginBottom: 'var(--spacing-xl)', animationDelay: '0.1s' }}>
+                <div style={{ display: 'flex', gap: 'var(--spacing-md)', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                            Search Operations
+                        </label>
+                        <input
+                            className="input"
+                            placeholder="Search by name..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div style={{ minWidth: 160 }}>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                            Status Filter
+                        </label>
+                        <select
+                            className="input"
+                            value={statusFilter}
+                            onChange={e => setStatusFilter(e.target.value)}
+                            style={{ width: '100%' }}
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="Planning">Planning</option>
+                            <option value="Active">Active</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Suspended">Suspended</option>
+                        </select>
+                    </div>
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-sm)',
+                        padding: 'var(--spacing-sm) var(--spacing-md)',
+                        background: 'var(--color-bg-tertiary)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border-primary)',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                        userSelect: 'none'
+                    }}>
+                        <input
+                            type="checkbox"
+                            checked={hideCompleted}
+                            onChange={e => setHideCompleted(e.target.checked)}
+                            style={{ accentColor: 'var(--color-accent-primary)' }}
+                        />
+                        Hide Completed
+                    </label>
+                    {activeFiltersCount > 0 && (
+                        <button
+                            onClick={() => {
+                                setSearchQuery('');
+                                setHideCompleted(false);
+                                setStatusFilter('');
+                            }}
+                            style={{
+                                fontSize: 12,
+                                padding: '8px 14px',
+                                background: 'var(--color-bg-elevated)',
+                                borderColor: 'var(--color-border-accent)'
+                            }}
+                        >
+                            Clear Filters
+                        </button>
+                    )}
+                </div>
+                <div style={{ marginTop: 'var(--spacing-sm)', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    Showing {filteredOperations?.length || 0} of {operations?.length || 0} operations
+                </div>
+            </div>
+
             {creating && (
                 <div className="animate-fade-in" style={{ marginBottom: 'var(--spacing-xl)' }}>
                     <OperationForm onDone={() => setCreating(false)} />
@@ -90,7 +188,7 @@ export default function OperationsManager({ onSelectUnit }: any) {
             )}
 
             <div style={{ display: 'grid', gap: 'var(--spacing-xl)' }}>
-                {operations?.map((op, index) => (
+                {filteredOperations?.map((op, index) => (
                     editing === op.id ? (
                         <OperationForm
                             key={op.id}
@@ -167,13 +265,13 @@ export default function OperationsManager({ onSelectUnit }: any) {
                     </div>
                 )}
 
-                {!operations?.length && !creating && (
+                {!filteredOperations?.length && !creating && (
                     <div className="card" style={{
                         textAlign: 'center',
                         padding: 'var(--spacing-2xl)',
                         color: 'var(--color-text-muted)'
                     }}>
-                        No operations created yet
+                        {operations?.length ? 'No operations match the current filters' : 'No operations created yet'}
                     </div>
                 )}
             </div>

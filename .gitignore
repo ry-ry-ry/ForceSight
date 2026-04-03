@@ -25,3 +25,4 @@ public/sql-wasm.wasm
 *.njsproj
 *.sln
 *.sw?
+DOCUMENTATION.md
