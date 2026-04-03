@@ -41,6 +41,14 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
         [parentId]
     );
 
+    // Deployments already belonging to the current unit (edit mode)
+    const currentDeployments = useLiveData(
+        () => unit?.id
+            ? db.deployments.where('unitId').equals(unit.id).sortBy('startDate')
+            : Promise.resolve([] as Deployment[]),
+        [unit?.id]
+    );
+
     // Which parent deployments to inherit (only relevant when creating)
     const [inheritedDeploymentIds, setInheritedDeploymentIds] = useState<Set<string>>(new Set());
 
@@ -59,13 +67,27 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
     };
 
     const handleInheritAll = () => {
-        if (!parentDeployments?.length) return;
-        if (inheritedDeploymentIds.size === parentDeployments.length) {
+        if (!availableParentDeployments.length) return;
+        if (inheritedDeploymentIds.size === availableParentDeployments.length) {
             setInheritedDeploymentIds(new Set());
         } else {
-            setInheritedDeploymentIds(new Set(parentDeployments.map(d => d.id)));
+            setInheritedDeploymentIds(new Set(availableParentDeployments.map(d => d.id)));
         }
     };
+
+    // Determine which parent deployments are already present on the current unit
+    const duplicateParentDeploymentIds = new Set<string>();
+    if (parentDeployments && currentDeployments) {
+        for (const pd of parentDeployments) {
+            const alreadyHas = currentDeployments.some(cd =>
+                cd.name === pd.name &&
+                cd.operationId === pd.operationId &&
+                cd.startDate === pd.startDate
+            );
+            if (alreadyHas) duplicateParentDeploymentIds.add(pd.id);
+        }
+    }
+    const availableParentDeployments = parentDeployments?.filter(d => !duplicateParentDeploymentIds.has(d.id)) || [];
 
     useEffect(() => {
         if (!unit && name) {
@@ -136,19 +158,23 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
             createdAt: unit?.createdAt || now
         });
 
-        // Inherit selected deployments from parent (only on create)
-        if (!unit && parentId && inheritedDeploymentIds.size > 0 && parentDeployments?.length) {
-            const toInherit = parentDeployments.filter(d => inheritedDeploymentIds.has(d.id));
-            const newDeployments: Deployment[] = toInherit.map(d => ({
-                id: crypto.randomUUID(),
-                unitId,
-                name: d.name,
-                operation: d.operation,
-                operationId: d.operationId,
-                startDate: d.startDate,
-                endDate: d.endDate
-            }));
-            await db.deployments.bulkPut(newDeployments);
+        // Inherit selected deployments from parent
+        if (parentId && inheritedDeploymentIds.size > 0 && parentDeployments?.length) {
+            const toInherit = parentDeployments.filter(d =>
+                inheritedDeploymentIds.has(d.id) && !duplicateParentDeploymentIds.has(d.id)
+            );
+            if (toInherit.length > 0) {
+                const newDeployments: Deployment[] = toInherit.map(d => ({
+                    id: crypto.randomUUID(),
+                    unitId,
+                    name: d.name,
+                    operation: d.operation,
+                    operationId: d.operationId,
+                    startDate: d.startDate,
+                    endDate: d.endDate
+                }));
+                await db.deployments.bulkPut(newDeployments);
+            }
         }
 
         onDone(unitId);
@@ -447,8 +473,8 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                     </div>
                 </div>
 
-                {/* Inherit deployments from parent — only shown when creating and a parent is selected */}
-                {!unit && parentId && parentDeployments && parentDeployments.length > 0 && (
+                {/* Inherit deployments from parent — shown when a parent is selected and there are deployments to copy */}
+                {parentId && availableParentDeployments.length > 0 && (
                     <div style={{
                         padding: 'var(--spacing-md)',
                         background: 'var(--color-bg-tertiary)',
@@ -462,9 +488,9 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                             marginBottom: 'var(--spacing-sm)'
                         }}>
                             <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                                Inherit Deployments from Parent
+                                {unit ? 'Inherit Additional Deployments from Parent' : 'Inherit Deployments from Parent'}
                                 <span style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 'normal', marginLeft: 6 }}>
-                                    ({parentDeployments.length} available)
+                                    ({availableParentDeployments.length} available)
                                 </span>
                             </label>
                             <button
@@ -477,7 +503,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                                     borderColor: 'var(--color-border-accent)'
                                 }}
                             >
-                                {inheritedDeploymentIds.size === parentDeployments.length ? 'Deselect All' : 'Select All'}
+                                {inheritedDeploymentIds.size === availableParentDeployments.length ? 'Deselect All' : 'Select All'}
                             </button>
                         </div>
 
@@ -487,7 +513,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                             maxHeight: 220,
                             overflowY: 'auto'
                         }}>
-                            {parentDeployments.map(d => {
+                            {availableParentDeployments.map(d => {
                                 const isActive = !d.endDate;
                                 const duration = d.endDate
                                     ? daysBetween(d.startDate, d.endDate)
@@ -570,7 +596,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                                 fontSize: 11,
                                 color: 'var(--color-accent-primary)'
                             }}>
-                                {inheritedDeploymentIds.size} deployment{inheritedDeploymentIds.size !== 1 ? 's' : ''} will be copied to the new unit
+                                {inheritedDeploymentIds.size} deployment{inheritedDeploymentIds.size !== 1 ? 's' : ''} will be copied to {unit ? 'this unit' : 'the new unit'}
                             </div>
                         )}
                     </div>
