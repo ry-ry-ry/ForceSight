@@ -246,7 +246,19 @@ export default function App() {
 
             {mode === 'create' && (
               <div className="animate-fade-in">
-                <UnitForm defaults={createDefaults} onDone={() => { setCreateDefaults(null); setMode('dashboard'); }} />
+                <UnitForm defaults={createDefaults} onDone={async (newUnitId?: string) => {
+                  setCreateDefaults(null);
+                  if (newUnitId) {
+                    try {
+                      const newUnit = await db.units.get(newUnitId);
+                      if (newUnit) {
+                        selectUnit(newUnit);
+                        return;
+                      }
+                    } catch {}
+                  }
+                  setMode('dashboard');
+                }} />
               </div>
             )}
 

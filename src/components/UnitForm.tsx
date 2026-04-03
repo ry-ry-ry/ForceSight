@@ -151,7 +151,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
             await db.deployments.bulkPut(newDeployments);
         }
 
-        onDone();
+        onDone(unitId);
     }
 
     async function remove() {
