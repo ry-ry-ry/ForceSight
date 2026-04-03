@@ -128,7 +128,7 @@ export default function Sidebar({ select }: any) {
                 sorted.sort((a, b) => a.status.localeCompare(b.status));
                 break;
             case 'echelon':
-                const echelonOrder = ['Command', 'Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company'];
+                const echelonOrder = ['Command', 'Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company', 'Platoon'];
                 sorted.sort((a, b) => {
                     const aIndex = echelonOrder.indexOf(a.echelon || '');
                     const bIndex = echelonOrder.indexOf(b.echelon || '');

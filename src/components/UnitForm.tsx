@@ -13,6 +13,7 @@ function inferEchelon(name: string): string {
     if (lower.includes('battalion') || lower.includes('bn')) return 'Battalion';
     if (lower.includes('squadron') || lower.includes('sqn')) return 'Squadron';
     if (lower.includes('company') || lower.includes('co')) return 'Company';
+    if (lower.includes('platoon') || lower.includes('plt')) return 'Platoon';
     return 'Battalion'; // default
 }
 
@@ -206,6 +207,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                             onChange={e => setEchelon(e.target.value)}
                             style={{ width: '100%' }}
                         >
+                            <option>Platoon</option>
                             <option>Company</option>
                             <option>Squadron</option>
                             <option>Battalion</option>

@@ -47,7 +47,7 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
     const [showHierarchyDialog, setShowHierarchyDialog] = useState(false);
     const [hierarchySettings, setHierarchySettings] = useState<HierarchySettings>({
         orientation: 'vertical',
-        includeEchelons: ['Command', 'Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company'],
+        includeEchelons: ['Command', 'Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company', 'Platoon'],
         format: 'svg',
         bgColor: '#0a0e27',
         connectionColor: '#00d9ff',
@@ -1705,7 +1705,7 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                                     background: 'var(--color-bg-tertiary)',
                                     borderRadius: 'var(--radius-sm)'
                                 }}>
-                                    {['Command', 'Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company'].map(echelon => (
+                                    {['Command', 'Corps', 'Division', 'Brigade', 'Regiment', 'Battalion', 'Squadron', 'Company', 'Platoon'].map(echelon => (
                                         <label key={echelon} style={{
                                             display: 'flex',
                                             alignItems: 'center',
