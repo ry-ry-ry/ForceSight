@@ -5,8 +5,8 @@ import { today, daysBetween, getEffectivenessInfo, getEffectivePatch } from '../
 import {
     SIZE_SYMBOLS,
     searchNatoSymbols,
-    inferNatoSymbolFromType,
     getNatoSymbolDataUrl,
+    getNatoSymbolByCode,
     type Affiliation
 } from '../nato-symbol-library';
 
@@ -108,13 +108,6 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
             setEchelon(inferEchelon(name));
         }
     }, [name, unit]);
-
-    // Auto-infer NATO symbol from unit type when creating
-    useEffect(() => {
-        if (!unit && !natoSymbol) {
-            setNatoSymbol(inferNatoSymbolFromType(type));
-        }
-    }, [type, unit, natoSymbol]);
 
     const filteredParents = allUnits?.filter(u =>
         u.id !== unit?.id &&
@@ -766,75 +759,169 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                     </div>
 
                     {/* Symbol Search/Select */}
-                    <div style={{ marginTop: 12, position: 'relative' }}>
+                    <div style={{ marginTop: 12 }}>
                         <label style={{ display: 'block', marginBottom: 4, fontSize: 12, color: 'var(--color-text-muted)' }}>
                             Function Symbol
                         </label>
-                        <input
-                            className="input"
-                            placeholder="Search symbols (infantry, armor, aviation...)"
-                            value={symbolSearch}
-                            onChange={e => {
-                                setSymbolSearch(e.target.value);
-                                setShowSymbolDropdown(true);
-                            }}
-                            onFocus={() => setShowSymbolDropdown(true)}
-                            style={{ width: '100%' }}
-                        />
-
-                        {showSymbolDropdown && (
-                            <div style={{
-                                position: 'absolute',
-                                top: '100%',
-                                left: 0,
-                                right: 0,
-                                maxHeight: 200,
-                                overflowY: 'auto',
+                        <button
+                            type="button"
+                            onClick={() => setShowSymbolDropdown(true)}
+                            style={{
+                                width: '100%',
+                                textAlign: 'left',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: 'var(--spacing-sm)',
                                 background: 'var(--color-bg-secondary)',
                                 border: '1px solid var(--color-border-accent)',
                                 borderRadius: 'var(--radius-sm)',
-                                zIndex: 1000,
-                                marginTop: 2
+                                cursor: 'pointer'
+                            }}
+                        >
+                            {natoSymbol ? (
+                                <>
+                                    <img
+                                        src={getNatoSymbolDataUrl(natoSymbol, affiliation, 40)}
+                                        alt="Selected symbol"
+                                        style={{ width: 40, height: 40, objectFit: 'contain' }}
+                                    />
+                                    <span>{getNatoSymbolByCode(natoSymbol)?.name || natoSymbol}</span>
+                                </>
+                            ) : (
+                                <span style={{ color: 'var(--color-text-muted)' }}>Click to select a symbol...</span>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Symbol Selection Modal */}
+                    {showSymbolDropdown && (
+                        <>
+                            <div
+                                onClick={() => {
+                                    setShowSymbolDropdown(false);
+                                    setSymbolSearch('');
+                                }}
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    background: 'rgba(0,0,0,0.6)',
+                                    zIndex: 2000,
+                                }}
+                            />
+                            <div style={{
+                                position: 'fixed',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                width: 'min(90vw, 600px)',
+                                maxHeight: '80vh',
+                                background: 'var(--color-bg-secondary)',
+                                border: '1px solid var(--color-border-accent)',
+                                borderRadius: 'var(--radius-md)',
+                                zIndex: 2001,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
                             }}>
-                                {searchNatoSymbols(symbolSearch).map(entry => (
-                                    <div
-                                        key={entry.code}
+                                <div style={{
+                                    padding: 'var(--spacing-md)',
+                                    borderBottom: '1px solid var(--color-border-primary)',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                }}>
+                                    <h3 style={{ margin: 0, fontSize: 16 }}>Select Function Symbol</h3>
+                                    <button
+                                        type="button"
                                         onClick={() => {
-                                            setNatoSymbol(entry.code);
                                             setShowSymbolDropdown(false);
                                             setSymbolSearch('');
                                         }}
                                         style={{
-                                            padding: 'var(--spacing-sm)',
+                                            background: 'transparent',
+                                            border: 'none',
+                                            fontSize: 20,
                                             cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 8,
-                                            background: natoSymbol === entry.code ? 'var(--color-bg-tertiary)' : 'transparent'
+                                            color: 'var(--color-text-muted)',
+                                            padding: '2px 6px',
                                         }}
                                     >
-                                        <img
-                                            src={getNatoSymbolDataUrl(entry.code, 'friendly', 32)}
-                                            alt={entry.name}
-                                            style={{ width: 32, height: 32, objectFit: 'contain' }}
-                                        />
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: 13 }}>{entry.name}</div>
-                                            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                                                {entry.category} · {entry.tags.join(', ')}
+                                        ×
+                                    </button>
+                                </div>
+                                <div style={{ padding: 'var(--spacing-md)' }}>
+                                    <input
+                                        className="input"
+                                        placeholder="Search symbols (infantry, armor, aviation...)"
+                                        value={symbolSearch}
+                                        onChange={e => setSymbolSearch(e.target.value)}
+                                        autoFocus
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                                <div style={{
+                                    flex: 1,
+                                    overflowY: 'auto',
+                                    padding: '0 var(--spacing-md) var(--spacing-md)',
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                                    gap: 'var(--spacing-sm)',
+                                    alignContent: 'start',
+                                }}>
+                                    {searchNatoSymbols(symbolSearch).map(entry => (
+                                        <div
+                                            key={entry.code}
+                                            onClick={() => {
+                                                setNatoSymbol(entry.code);
+                                                setShowSymbolDropdown(false);
+                                                setSymbolSearch('');
+                                            }}
+                                            style={{
+                                                padding: 'var(--spacing-sm)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 8,
+                                                background: natoSymbol === entry.code ? 'var(--color-bg-tertiary)' : 'var(--color-bg-primary)',
+                                                border: `1px solid ${natoSymbol === entry.code ? 'var(--color-accent-primary)' : 'var(--color-border-primary)'}`,
+                                                borderRadius: 'var(--radius-sm)',
+                                                transition: 'all 0.2s ease',
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                if (natoSymbol !== entry.code) {
+                                                    e.currentTarget.style.borderColor = 'var(--color-border-accent)';
+                                                }
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (natoSymbol !== entry.code) {
+                                                    e.currentTarget.style.borderColor = 'var(--color-border-primary)';
+                                                }
+                                            }}
+                                        >
+                                            <img
+                                                src={getNatoSymbolDataUrl(entry.code, 'friendly', 40)}
+                                                alt={entry.name}
+                                                style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }}
+                                            />
+                                            <div style={{ minWidth: 0 }}>
+                                                <div style={{ fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.name}</div>
+                                                <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>
+                                                    {entry.category}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
-                        )}
-                    </div>
+                        </>
+                    )}
 
                     {/* Preview */}
                     {natoSymbol && (
                         <div style={{
                             marginTop: 12,
-                            padding: 8,
+                            padding: 12,
                             background: 'var(--color-bg-primary)',
                             borderRadius: 'var(--radius-sm)',
                             display: 'flex',
@@ -843,11 +930,11 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         }}>
                             <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Preview:</div>
                             <img
-                                src={getNatoSymbolDataUrl(natoSymbol, affiliation, 40)}
+                                src={getNatoSymbolDataUrl(natoSymbol, affiliation, 64)}
                                 alt="Selected symbol"
-                                style={{ width: 40, height: 40, objectFit: 'contain' }}
+                                style={{ width: 64, height: 64, objectFit: 'contain' }}
                             />
-                            <span style={{ fontSize: 12 }}>
+                            <span style={{ fontSize: 16 }}>
                                 {SIZE_SYMBOLS[sizeSymbolOverride || echelon]?.symbol || ''}
                             </span>
                         </div>
