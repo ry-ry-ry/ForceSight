@@ -102,19 +102,25 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
         return hierarchy;
     };
 
-    const getSubordinates = (unitId: string): Unit[] => {
+    const getSubordinates = (unitId: string, rootViewedUnitId?: string): Unit[] => {
         if (!allUnits) return [];
         return allUnits
-            .filter(u => u.parentId === unitId)
+            .filter(u => {
+                if (u.parentId !== unitId) return false;
+                // Attached units only show when their immediate parent is the root unit being viewed
+                // If rootViewedUnitId is set and this unit is attached, only show if parentId === rootViewedUnitId
+                if (u.attached && rootViewedUnitId !== undefined && unitId !== rootViewedUnitId) return false;
+                return true;
+            })
             .sort((a, b) => militaryNameCompare(a.name, b.name));
     };
 
-    const renderSubordinates = (parentUnit: Unit, depth: number = 0): React.ReactElement[] => {
-        const subordinates = getSubordinates(parentUnit.id);
+    const renderSubordinates = (parentUnit: Unit, depth: number = 0, rootViewedUnitId?: string): React.ReactElement[] => {
+        const subordinates = getSubordinates(parentUnit.id, rootViewedUnitId);
         const elements: React.ReactElement[] = [];
 
         subordinates.forEach(sub => {
-            const subChildren = getSubordinates(sub.id);
+            const subChildren = getSubordinates(sub.id, rootViewedUnitId);
             const hasChildren = subChildren.length > 0;
 
             if (hasChildren) {
@@ -166,7 +172,7 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                                 </div>
                             </div>
                         </div>
-                        {renderSubordinates(sub, depth + 20)}
+                        {renderSubordinates(sub, depth + 20, rootViewedUnitId)}
                     </div>
                 );
             } else {
@@ -222,16 +228,24 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
     };
 
     // SVG Hierarchy Generation Functions
-    const buildHierarchyTree = (rootUnit: Unit, allUnits: Unit[], settings: HierarchySettings): HierarchyNode | null => {
+    const buildHierarchyTree = (rootUnit: Unit, allUnits: Unit[], settings: HierarchySettings, rootViewedUnitId?: string): HierarchyNode | null => {
         // Filter out units whose echelon is not in the include list
         if (rootUnit.echelon && !settings.includeEchelons.includes(rootUnit.echelon)) {
             return null;
         }
 
+        // Get the actual root unit ID being viewed (for attached unit filtering)
+        const effectiveRootId = rootViewedUnitId ?? rootUnit.id;
+
         const children = allUnits
-            .filter(u => u.parentId === rootUnit.id)
+            .filter(u => {
+                if (u.parentId !== rootUnit.id) return false;
+                // Attached units only show when their immediate parent is the root unit being viewed
+                if (u.attached && u.parentId !== effectiveRootId) return false;
+                return true;
+            })
             .sort((a, b) => militaryNameCompare(a.name, b.name))
-            .map(child => buildHierarchyTree(child, allUnits, settings))
+            .map(child => buildHierarchyTree(child, allUnits, settings, effectiveRootId))
             .filter((node): node is HierarchyNode => node !== null);
 
         return {
@@ -296,7 +310,7 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
         const bg = settings.bgColor;
 
         // Build tree
-        const tree = buildHierarchyTree(unit, allUnits, settings);
+        const tree = buildHierarchyTree(unit, allUnits, settings, unit.id);
         if (!tree) return '';
 
         // --- Text wrapping helper ---
@@ -769,7 +783,7 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
         const connColor = hierarchySettings.connectionColor;
         const settings = hierarchySettings;
 
-        const tree = buildHierarchyTree(unit, allUnits, settings);
+        const tree = buildHierarchyTree(unit, allUnits, settings, unit.id);
         if (!tree) return;
 
         // ── Poster-specific sizing: much larger patches ──
@@ -1329,7 +1343,7 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                                 </div>
                             </div>
                         </div>
-                        {renderSubordinates(unit, 20)}
+                        {renderSubordinates(unit, 20, unit.id)}
                     </div>
                 </div>
             )}

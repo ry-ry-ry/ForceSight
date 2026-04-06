@@ -182,9 +182,16 @@ export default function Sidebar({ select }: any) {
         return groups;
     };
 
-    const getChildren = (parentId: string, allUnits: Unit[]) => {
+    const getChildren = (parentId: string, allUnits: Unit[], rootParentId?: string) => {
         return allUnits
-            .filter(u => u.parentId === parentId && u.type !== 'Command')
+            .filter(u => {
+                if (u.parentId !== parentId) return false;
+                if (u.type === 'Command') return false;
+                // Attached units only show when their immediate parent is the root being viewed
+                // If rootParentId is set and this unit is attached, only show if parentId === rootParentId
+                if (u.attached && rootParentId !== undefined && parentId !== rootParentId) return false;
+                return true;
+            })
             .sort((a, b) => militaryNameCompare(a.name, b.name));
     };
 
@@ -195,8 +202,11 @@ export default function Sidebar({ select }: any) {
         return null;
     };
 
-    const renderUnit = (u: Unit, depth: number, allUnits: Unit[], flatMode: boolean = false): React.ReactElement => {
-        const children = flatMode ? [] : getChildren(u.id, allUnits);
+    const renderUnit = (u: Unit, depth: number, allUnits: Unit[], flatMode: boolean = false, rootParentId?: string): React.ReactElement => {
+        // Get children - pass rootParentId to filter attached units correctly
+        // If this is a top-level render, u.id becomes the rootParentId
+        const effectiveRootId = rootParentId === undefined ? u.id : rootParentId;
+        const children = flatMode ? [] : getChildren(u.id, allUnits, effectiveRootId);
         const hasChildren = children.length > 0;
         const isExpanded = expandedUnits.has(u.id);
         const parentCommand = getParentCommand(u);
@@ -297,7 +307,7 @@ export default function Sidebar({ select }: any) {
                     />
                 </div>
 
-                {hasChildren && isExpanded && children.map(child => renderUnit(child, depth + 1, allUnits))}
+                {hasChildren && isExpanded && children.map(child => renderUnit(child, depth + 1, allUnits, false, effectiveRootId))}
             </div>
         );
     };

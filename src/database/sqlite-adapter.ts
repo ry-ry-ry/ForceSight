@@ -24,6 +24,7 @@ const TABLE_SCHEMAS: Record<string, string> = {
         health TEXT,
         effectiveness INTEGER,
         parentId TEXT,
+        attached INTEGER,
         taskForceId TEXT,
         lastRTBDate TEXT,
         locationLat REAL,
@@ -112,7 +113,7 @@ const MIGRATIONS_TABLE = `CREATE TABLE IF NOT EXISTS _migrations (
 // ── Column lists per table (for INSERT generation) ────────────────────────────
 
 const TABLE_COLUMNS: Record<string, string[]> = {
-    units: ['id', 'name', 'type', 'echelon', 'country', 'status', 'health', 'effectiveness', 'parentId', 'taskForceId', 'lastRTBDate', 'locationLat', 'locationLng', 'patch', 'natoSymbol', 'affiliation', 'sizeSymbolOverride', 'createdAt'],
+    units: ['id', 'name', 'type', 'echelon', 'country', 'status', 'health', 'effectiveness', 'parentId', 'attached', 'taskForceId', 'lastRTBDate', 'locationLat', 'locationLng', 'patch', 'natoSymbol', 'affiliation', 'sizeSymbolOverride', 'createdAt'],
     deployments: ['id', 'unitId', 'name', 'operation', 'operationId', 'startDate', 'endDate'],
     operations: ['id', 'name', 'type', 'description', 'startDate', 'endDate', 'status', 'createdAt'],
     missions: ['id', 'unitId', 'operationId', 'name', 'type', 'startDate', 'endDate', 'description'],
@@ -158,11 +159,27 @@ function sqliteTable<T extends { id: string }>(
     notify: () => void,
     scheduleSave: () => void
 ): TableAdapter<T> {
+    // Boolean fields that need conversion
+    const booleanFields = ['attached'];
+
+    const toDbValue = (col: string, val: any): any => {
+        if (val === undefined || val === null) return null;
+        if (booleanFields.includes(col) && typeof val === 'boolean') {
+            return val ? 1 : 0;
+        }
+        return val;
+    };
+
     const rowToObj = (row: any[], colNames: string[]): T => {
         const obj: any = {};
         colNames.forEach((col, i) => {
             const val = row[i];
-            obj[col] = val === null ? undefined : val;
+            // Convert SQLite INTEGER (0/1) to boolean for boolean fields
+            if (booleanFields.includes(col)) {
+                obj[col] = val === 1;
+            } else {
+                obj[col] = val === null ? undefined : val;
+            }
         });
         return obj as T;
     };
@@ -198,7 +215,7 @@ function sqliteTable<T extends { id: string }>(
 
         put: async (item) => {
             const db = getDb();
-            const vals = columns.map(c => (item as any)[c] ?? null);
+            const vals = columns.map(c => toDbValue(c, (item as any)[c]));
             db.run(upsertSql, vals);
             notify();
             scheduleSave();
@@ -207,7 +224,7 @@ function sqliteTable<T extends { id: string }>(
         bulkPut: async (items) => {
             const db = getDb();
             for (const item of items) {
-                const vals = columns.map(c => (item as any)[c] ?? null);
+                const vals = columns.map(c => toDbValue(c, (item as any)[c]));
                 db.run(upsertSql, vals);
             }
             notify();
@@ -219,7 +236,7 @@ function sqliteTable<T extends { id: string }>(
             const keys = Object.keys(changes).filter(k => k !== 'id');
             if (keys.length === 0) return;
             const sets = keys.map(k => `${k} = ?`).join(', ');
-            const vals = keys.map(k => (changes as any)[k] ?? null);
+            const vals = keys.map(k => toDbValue(k, (changes as any)[k]));
             vals.push(id);
             db.run(`UPDATE ${tableName} SET ${sets} WHERE id = ?`, vals);
             notify();
@@ -379,6 +396,9 @@ export class SQLiteAdapter implements DatabaseAdapter {
         }
         if (!columnNames.includes('sizeSymbolOverride')) {
             this.sqlDb!.run('ALTER TABLE units ADD COLUMN sizeSymbolOverride TEXT');
+        }
+        if (!columnNames.includes('attached')) {
+            this.sqlDb!.run('ALTER TABLE units ADD COLUMN attached INTEGER');
         }
     }
 

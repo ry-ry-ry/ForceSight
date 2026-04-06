@@ -32,6 +32,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
     const [status, setStatus] = useState(unit?.status || 'Standby');
     const [rtb, setRtb] = useState(unit?.lastRTBDate || '');
     const [parentId, setParentId] = useState(unit?.parentId || defaults?.parentId || '');
+    const [attached, setAttached] = useState<boolean>(unit?.attached ?? false);
     const [patch, setPatch] = useState(unit?.patch || '');
     const [health, setHealth] = useState<'Healthy' | 'Damaged' | 'Destroyed'>(unit?.health || 'Healthy');
     const [effectiveness, setEffectiveness] = useState<number>(unit?.effectiveness ?? 100);
@@ -173,6 +174,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                 health,
                 effectiveness,
                 parentId: parentId || undefined,
+                attached: attached,
                 taskForceId: unit?.taskForceId || undefined,
                 patch: patch || undefined,
                 lastRTBDate: rtb || undefined,
@@ -500,6 +502,33 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         )}
                     </div>
                 </div>
+
+                {/* Attachment option - shown when a parent is selected */}
+                {parentId && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-sm)',
+                        padding: 'var(--spacing-sm)',
+                        background: 'var(--color-bg-tertiary)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--color-border-primary)'
+                    }}>
+                        <input
+                            type="checkbox"
+                            id="attached"
+                            checked={attached}
+                            onChange={(e) => setAttached(e.target.checked)}
+                            style={{ width: 16, height: 16, cursor: 'pointer' }}
+                        />
+                        <label htmlFor="attached" style={{ fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>
+                            <span style={{ fontWeight: 500 }}>Attached</span>
+                            <span style={{ color: 'var(--color-text-muted)', marginLeft: 6, fontSize: 11 }}>
+                                (admin only, not in higher hierarchy)
+                            </span>
+                        </label>
+                    </div>
+                )}
 
                 {/* Inherit deployments from parent — shown when a parent is selected and there are deployments to copy */}
                 {parentId && availableParentDeployments.length > 0 && (

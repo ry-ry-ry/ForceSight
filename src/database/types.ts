@@ -10,6 +10,7 @@ export interface Unit {
     health?: 'Healthy' | 'Damaged' | 'Destroyed';
     effectiveness?: number; // 0–100 in 10% increments
     parentId?: string;
+    attached?: boolean; // true = attached for admin only, not full hierarchy membership
     taskForceId?: string;
     lastRTBDate?: string;
     locationLat?: number;
