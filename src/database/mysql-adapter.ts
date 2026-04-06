@@ -19,6 +19,10 @@ import type {
 //   DELETE /api/units             → clear table
 //   GET    /api/units?field=value → filtered query
 //   GET    /api/units?orderBy=x   → ordered query
+//
+// Backup/Restore endpoints:
+//   GET    /api/backup            → returns SQL dump as text
+//   POST   /api/restore           → restores from SQL dump (body = { sql: "..." })
 
 const TABLE_NAMES = ['units', 'deployments', 'operations', 'missions', 'taskForces', 'mapIcons', 'mapPins', 'mapShapes', 'natoSymbols'] as const;
 
@@ -187,5 +191,30 @@ export class MySQLAdapter implements DatabaseAdapter {
 
     getVersion(): number {
         return this.version;
+    }
+
+    /**
+     * Export database as SQL dump (for native backup)
+     */
+    async exportRaw(): Promise<Uint8Array> {
+        const res = await fetch(`${this.baseUrl}/api/backup`);
+        if (!res.ok) throw new Error(`MySQL backup failed: ${res.status} ${res.statusText}`);
+        const sql = await res.text();
+        return new TextEncoder().encode(sql);
+    }
+
+    /**
+     * Import database from SQL dump (for native restore)
+     */
+    async importRaw(data: Uint8Array): Promise<void> {
+        const sql = new TextDecoder().decode(data);
+        const res = await fetch(`${this.baseUrl}/api/restore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sql }),
+        });
+        if (!res.ok) throw new Error(`MySQL restore failed: ${res.status} ${res.statusText}`);
+        this.version++;
+        this.listeners.forEach(fn => fn());
     }
 }

@@ -25,7 +25,11 @@ export default function SettingsDialog({
 }: Props) {
     const config = getConfig();
     const backend = config.backend ?? 'indexeddb';
-    const supportsNativeBackup = backend === 'sqlite';
+    const supportsNativeBackup = backend === 'sqlite' || backend === 'mysql';
+
+    // File extension and label based on backend type
+    const nativeBackupExt = backend === 'mysql' ? 'sql' : 'sqlite';
+    const nativeBackupLabel = backend === 'mysql' ? 'SQL Dump' : 'SQLite Database';
 
     const restoreInputRef = useRef<HTMLInputElement>(null);
     const [restoring, setRestoring] = useState(false);
@@ -96,18 +100,19 @@ export default function SettingsDialog({
             const adapter = getDb();
             if (!adapter.exportRaw) return;
             const raw = await adapter.exportRaw();
-            const blob = new Blob([raw.buffer as ArrayBuffer], { type: 'application/x-sqlite3' });
+            const mimeType = backend === 'mysql' ? 'text/plain' : 'application/x-sqlite3';
+            const blob = new Blob([raw.buffer as ArrayBuffer], { type: mimeType });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `forcesight-${new Date().toISOString().split('T')[0]}.sqlite`;
+            a.download = `forcesight-${new Date().toISOString().split('T')[0]}.${nativeBackupExt}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-            showStatus('SQLite database file downloaded successfully.', 'success');
+            showStatus(`${nativeBackupLabel} backup downloaded successfully.`, 'success');
         } catch {
-            showStatus('Failed to create SQLite backup.', 'error');
+            showStatus(`Failed to create ${nativeBackupLabel} backup.`, 'error');
         } finally {
             setBackingUp(false);
         }
@@ -121,15 +126,15 @@ export default function SettingsDialog({
         try {
             const ext = file.name.split('.').pop()?.toLowerCase();
 
-            if (ext === 'sqlite' || ext === 'db') {
+            if (ext === 'sqlite' || ext === 'db' || ext === 'sql') {
                 const adapter = getDb();
                 if (!adapter.importRaw) {
-                    showStatus('Native SQLite restore requires the SQLite backend.', 'error');
+                    showStatus('Native restore requires SQLite or MySQL backend.', 'error');
                     return;
                 }
                 const buffer = await file.arrayBuffer();
                 await adapter.importRaw(new Uint8Array(buffer));
-                showStatus('SQLite database restored successfully.', 'success');
+                showStatus(`${nativeBackupLabel} restored successfully.`, 'success');
             } else {
                 const text = await file.text();
                 const backup = parseBackup(text);
@@ -146,7 +151,7 @@ export default function SettingsDialog({
         }
 
         e.target.value = '';
-    }, [onRestoreComplete]);
+    }, [onRestoreComplete, nativeBackupLabel]);
 
     if (!open) return null;
 
@@ -293,7 +298,7 @@ export default function SettingsDialog({
                                             fontSize: 12,
                                         }}
                                     >
-                                        ⬇ Export SQLite
+                                        ⬇ Export {nativeBackupLabel}
                                     </button>
                                 )}
                             </div>
@@ -315,7 +320,7 @@ export default function SettingsDialog({
                                     {restoring ? 'Restoring...' : '⬆ Import from Backup'}
                                 </button>
                                 <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginTop: 4 }}>
-                                    Accepts .json{supportsNativeBackup ? ', .sqlite, .db' : ''} — replaces current data
+                                    Accepts .json{supportsNativeBackup && (backend === 'mysql' ? ', .sql' : ', .sqlite, .db')} — replaces current data
                                 </div>
                                 <input
                                     ref={restoreInputRef}
