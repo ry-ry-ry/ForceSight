@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { db, useLiveData } from '../database/adapter';
 import type { Deployment } from '../database/types';
 import { today, daysBetween, getEffectivenessInfo, getEffectivePatch } from '../utils';
+import {
+    SIZE_SYMBOLS,
+    searchNatoSymbols,
+    inferNatoSymbolFromType,
+    getNatoSymbolDataUrl,
+    type Affiliation
+} from '../nato-symbol-library';
 
 function inferEchelon(name: string): string {
     const lower = name.toLowerCase();
@@ -30,6 +37,12 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
     const [effectiveness, setEffectiveness] = useState<number>(unit?.effectiveness ?? 100);
     const [parentSearch, setParentSearch] = useState('');
     const [showParentDropdown, setShowParentDropdown] = useState(false);
+    // NATO symbol fields
+    const [natoSymbol, setNatoSymbol] = useState<string>(unit?.natoSymbol || '');
+    const [affiliation, setAffiliation] = useState<Affiliation>(unit?.affiliation || 'friendly');
+    const [sizeSymbolOverride, setSizeSymbolOverride] = useState<string>(unit?.sizeSymbolOverride || '');
+    const [symbolSearch, setSymbolSearch] = useState('');
+    const [showSymbolDropdown, setShowSymbolDropdown] = useState(false);
 
     const allUnits = useLiveData(() => db.units.toArray(), []);
 
@@ -95,6 +108,13 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
         }
     }, [name, unit]);
 
+    // Auto-infer NATO symbol from unit type when creating
+    useEffect(() => {
+        if (!unit && !natoSymbol) {
+            setNatoSymbol(inferNatoSymbolFromType(type));
+        }
+    }, [type, unit, natoSymbol]);
+
     const filteredParents = allUnits?.filter(u =>
         u.id !== unit?.id &&
         u.name.toLowerCase().includes(parentSearch.toLowerCase())
@@ -139,45 +159,53 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
     };
 
     async function save() {
-        const now = Date.now();
-        const unitId = unit?.id || crypto.randomUUID();
+        try {
+            const now = Date.now();
+            const unitId = unit?.id || crypto.randomUUID();
 
-        await db.units.put({
-            id: unitId,
-            name,
-            type,
-            echelon,
-            country: country || undefined,
-            status,
-            health,
-            effectiveness,
-            parentId: parentId || undefined,
-            taskForceId: unit?.taskForceId || undefined,
-            patch: patch || undefined,
-            lastRTBDate: rtb || undefined,
-            createdAt: unit?.createdAt || now
-        });
+            await db.units.put({
+                id: unitId,
+                name,
+                type,
+                echelon,
+                country: country || undefined,
+                status,
+                health,
+                effectiveness,
+                parentId: parentId || undefined,
+                taskForceId: unit?.taskForceId || undefined,
+                patch: patch || undefined,
+                lastRTBDate: rtb || undefined,
+                natoSymbol: natoSymbol || undefined,
+                affiliation: affiliation || undefined,
+                sizeSymbolOverride: sizeSymbolOverride || undefined,
+                createdAt: unit?.createdAt || now
+            });
 
-        // Inherit selected deployments from parent
-        if (parentId && inheritedDeploymentIds.size > 0 && parentDeployments?.length) {
-            const toInherit = parentDeployments.filter(d =>
-                inheritedDeploymentIds.has(d.id) && !duplicateParentDeploymentIds.has(d.id)
-            );
-            if (toInherit.length > 0) {
-                const newDeployments: Deployment[] = toInherit.map(d => ({
-                    id: crypto.randomUUID(),
-                    unitId,
-                    name: d.name,
-                    operation: d.operation,
-                    operationId: d.operationId,
-                    startDate: d.startDate,
-                    endDate: d.endDate
-                }));
-                await db.deployments.bulkPut(newDeployments);
+            // Inherit selected deployments from parent
+            if (parentId && inheritedDeploymentIds.size > 0 && parentDeployments?.length) {
+                const toInherit = parentDeployments.filter(d =>
+                    inheritedDeploymentIds.has(d.id) && !duplicateParentDeploymentIds.has(d.id)
+                );
+                if (toInherit.length > 0) {
+                    const newDeployments: Deployment[] = toInherit.map(d => ({
+                        id: crypto.randomUUID(),
+                        unitId,
+                        name: d.name,
+                        operation: d.operation,
+                        operationId: d.operationId,
+                        startDate: d.startDate,
+                        endDate: d.endDate
+                    }));
+                    await db.deployments.bulkPut(newDeployments);
+                }
             }
-        }
 
-        onDone(unitId);
+            onDone(unitId);
+        } catch (err) {
+            console.error('Failed to save unit:', err);
+            alert('Failed to save unit: ' + (err as Error).message);
+        }
     }
 
     async function remove() {
@@ -655,6 +683,144 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                                 }}
                             />
                             <button onClick={() => setPatch('')}>Remove Patch</button>
+                        </div>
+                    )}
+                </div>
+
+                {/* NATO Symbol Section */}
+                <div style={{
+                    padding: 'var(--spacing-md)',
+                    background: 'var(--color-bg-tertiary)',
+                    border: '1px solid var(--color-border-primary)',
+                    borderRadius: 'var(--radius-md)'
+                }}>
+                    <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                        NATO Symbol
+                    </label>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        {/* Affiliation */}
+                        <div>
+                            <label style={{ display: 'block', marginBottom: 4, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                Affiliation
+                            </label>
+                            <select
+                                className="input"
+                                value={affiliation}
+                                onChange={e => setAffiliation(e.target.value as Affiliation)}
+                                style={{ width: '100%' }}
+                            >
+                                <option value="friendly">Friendly</option>
+                                <option value="hostile">Hostile</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="unknown">Unknown</option>
+                            </select>
+                        </div>
+
+                        {/* Size Override */}
+                        <div>
+                            <label style={{ display: 'block', marginBottom: 4, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                Size Symbol (Auto: {echelon})
+                            </label>
+                            <select
+                                className="input"
+                                value={sizeSymbolOverride}
+                                onChange={e => setSizeSymbolOverride(e.target.value)}
+                                style={{ width: '100%' }}
+                            >
+                                <option value="">Auto from Echelon</option>
+                                {Object.entries(SIZE_SYMBOLS).map(([name, data]) => (
+                                    <option key={name} value={name}>{data.symbol} {name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Symbol Search/Select */}
+                    <div style={{ marginTop: 12, position: 'relative' }}>
+                        <label style={{ display: 'block', marginBottom: 4, fontSize: 12, color: 'var(--color-text-muted)' }}>
+                            Function Symbol
+                        </label>
+                        <input
+                            className="input"
+                            placeholder="Search symbols (infantry, armor, aviation...)"
+                            value={symbolSearch}
+                            onChange={e => {
+                                setSymbolSearch(e.target.value);
+                                setShowSymbolDropdown(true);
+                            }}
+                            onFocus={() => setShowSymbolDropdown(true)}
+                            style={{ width: '100%' }}
+                        />
+
+                        {showSymbolDropdown && (
+                            <div style={{
+                                position: 'absolute',
+                                top: '100%',
+                                left: 0,
+                                right: 0,
+                                maxHeight: 200,
+                                overflowY: 'auto',
+                                background: 'var(--color-bg-secondary)',
+                                border: '1px solid var(--color-border-accent)',
+                                borderRadius: 'var(--radius-sm)',
+                                zIndex: 1000,
+                                marginTop: 2
+                            }}>
+                                {searchNatoSymbols(symbolSearch).map(entry => (
+                                    <div
+                                        key={entry.code}
+                                        onClick={() => {
+                                            setNatoSymbol(entry.code);
+                                            setShowSymbolDropdown(false);
+                                            setSymbolSearch('');
+                                        }}
+                                        style={{
+                                            padding: 'var(--spacing-sm)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            background: natoSymbol === entry.code ? 'var(--color-bg-tertiary)' : 'transparent'
+                                        }}
+                                    >
+                                        <img
+                                            src={getNatoSymbolDataUrl(entry.code, 'friendly', 32)}
+                                            alt={entry.name}
+                                            style={{ width: 32, height: 32, objectFit: 'contain' }}
+                                        />
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: 13 }}>{entry.name}</div>
+                                            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                                                {entry.category} · {entry.tags.join(', ')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Preview */}
+                    {natoSymbol && (
+                        <div style={{
+                            marginTop: 12,
+                            padding: 8,
+                            background: 'var(--color-bg-primary)',
+                            borderRadius: 'var(--radius-sm)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12
+                        }}>
+                            <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>Preview:</div>
+                            <img
+                                src={getNatoSymbolDataUrl(natoSymbol, affiliation, 40)}
+                                alt="Selected symbol"
+                                style={{ width: 40, height: 40, objectFit: 'contain' }}
+                            />
+                            <span style={{ fontSize: 12 }}>
+                                {SIZE_SYMBOLS[sizeSymbolOverride || echelon]?.symbol || ''}
+                            </span>
                         </div>
                     )}
                 </div>

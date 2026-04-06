@@ -15,6 +15,10 @@ export interface Unit {
     locationLat?: number;
     locationLng?: number;
     patch?: string; // base64 encoded image
+    // NATO symbol fields
+    natoSymbol?: string; // APP-6 code (e.g., "sfgp" for infantry)
+    affiliation?: 'friendly' | 'hostile' | 'neutral' | 'unknown';
+    sizeSymbolOverride?: string; // manual override for echelon marker
     createdAt: number;
 }
 
@@ -86,6 +90,14 @@ export interface MapShape {
     createdAt: number;
 }
 
+export interface NatoSymbol {
+    id: string;
+    name: string;
+    code?: string; // APP-6 code if applicable
+    image: string; // base64 encoded SVG/PNG
+    createdAt: number;
+}
+
 // ── Backup / export format ────────────────────────────────────────────────────
 
 export interface BackupData {
@@ -100,6 +112,7 @@ export interface BackupData {
         mapIcons: MapIcon[];
         mapPins: MapPin[];
         mapShapes: MapShape[];
+        natoSymbols: NatoSymbol[];
     };
 }
 
@@ -140,6 +153,7 @@ export interface DatabaseAdapter {
     mapIcons: TableAdapter<MapIcon>;
     mapPins: TableAdapter<MapPin>;
     mapShapes: TableAdapter<MapShape>;
+    natoSymbols: TableAdapter<NatoSymbol>;
 
     // Bulk operations
     exportAll(): Promise<BackupData>;

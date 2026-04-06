@@ -1,4 +1,4 @@
-import type { BackupData, Unit, Deployment, Operation, Mission, TaskForce, MapIcon, MapPin, MapShape } from './types';
+import type { BackupData, Unit, Deployment, Operation, Mission, TaskForce, MapIcon, MapPin, MapShape, NatoSymbol } from './types';
 
 /**
  * Parse any ForceSight backup JSON (v1–current) into a normalised BackupData.
@@ -21,7 +21,7 @@ export function parseBackup(raw: string): BackupData {
     const d = parsed.data;
 
     return {
-        version: 6, // normalised to current
+        version: 7, // normalised to current
         timestamp: parsed.timestamp || new Date().toISOString(),
         data: {
             units: normaliseUnits(d.units || [], version),
@@ -32,6 +32,7 @@ export function parseBackup(raw: string): BackupData {
             mapIcons: normaliseMapIcons(d.mapIcons || []),
             mapPins: normaliseMapPins(d.mapPins || []),
             mapShapes: normaliseMapShapes(d.mapShapes || []),
+            natoSymbols: normaliseNatoSymbols(d.natoSymbols || []),
         }
     };
 }
@@ -51,6 +52,7 @@ export function getBackupSummary(data: BackupData): string[] {
     if (d.mapIcons.length) lines.push(`${d.mapIcons.length} map icons`);
     if (d.mapPins.length) lines.push(`${d.mapPins.length} map pins`);
     if (d.mapShapes.length) lines.push(`${d.mapShapes.length} map shapes`);
+    if (d.natoSymbols?.length) lines.push(`${d.natoSymbols.length} NATO symbols`);
 
     if (lines.length === 0) lines.push('Empty backup');
 
@@ -82,6 +84,11 @@ function normaliseUnits(raw: any[], _backupVersion: number): Unit[] {
         // v8+ fields
         if (u.health) unit.health = u.health;
         if (u.effectiveness !== undefined) unit.effectiveness = u.effectiveness;
+
+        // v9+ NATO symbol fields
+        if (u.natoSymbol) unit.natoSymbol = u.natoSymbol;
+        if (u.affiliation) unit.affiliation = u.affiliation;
+        if (u.sizeSymbolOverride) unit.sizeSymbolOverride = u.sizeSymbolOverride;
 
         return unit;
     });
@@ -171,5 +178,15 @@ function normaliseMapShapes(raw: any[]): MapShape[] {
         style: s.style || '{"color":"#00d9ff","fillOpacity":0.3,"lineWidth":2}',
         description: s.description,
         createdAt: s.createdAt || Date.now(),
+    }));
+}
+
+function normaliseNatoSymbols(raw: any[]): NatoSymbol[] {
+    return raw.map(ns => ({
+        id: ns.id || crypto.randomUUID(),
+        name: ns.name || 'Unnamed Symbol',
+        code: ns.code,
+        image: ns.image || '',
+        createdAt: ns.createdAt || Date.now(),
     }));
 }

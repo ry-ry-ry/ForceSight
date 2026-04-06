@@ -1,7 +1,8 @@
 import { db, useLiveData } from '../../database/adapter';
-import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare, getEffectivenessInfo, getHealthColor, getEffectivePatch } from '../../utils';
+import { daysBetween, today, calculateReadiness, escapeXml, militaryNameCompare, getEffectivenessInfo, getHealthColor } from '../../utils';
 import type { Unit } from '../../database/types';
 import React, { useState } from 'react';
+import { UnitIcon } from '../UnitIcon';
 
 interface HierarchyNode {
     unit: Unit;
@@ -151,19 +152,11 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                             }}
                         >
                             <span style={{ color: 'var(--color-accent-primary)', fontSize: 12 }}>└─</span>
-                            {getEffectivePatch(sub, allUnits) && (
-                                <img
-                                    src={getEffectivePatch(sub, allUnits)}
-                                    alt={`${sub.name} patch`}
-                                    style={{
-                                        width: 32,
-                                        height: 32,
-                                        objectFit: 'contain',
-                                        borderRadius: 'var(--radius-sm)',
-                                        border: '1px solid var(--color-border-accent)'
-                                    }}
-                                />
-                            )}
+                            <UnitIcon
+                                unit={sub}
+                                allUnits={allUnits}
+                                size="small"
+                            />
                             <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 600, fontSize: 13 }}>
                                     {sub.name}
@@ -207,19 +200,11 @@ export default function OverviewTab({ unit, onSelectUnit, onAddSubordinate }: an
                         }}
                     >
                         <span style={{ color: 'var(--color-accent-primary)', fontSize: 12 }}>└─</span>
-                        {getEffectivePatch(sub, allUnits) && (
-                            <img
-                                src={getEffectivePatch(sub, allUnits)}
-                                alt={`${sub.name} patch`}
-                                style={{
-                                    width: 32,
-                                    height: 32,
-                                    objectFit: 'contain',
-                                    borderRadius: 'var(--radius-sm)',
-                                    border: '1px solid var(--color-border-accent)'
-                                }}
-                            />
-                        )}
+                        <UnitIcon
+                            unit={sub}
+                            allUnits={allUnits}
+                            size="small"
+                        />
                         <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: sub.id === unit.id ? 'bold' : 'normal', fontSize: 13 }}>
                                 {sub.name}

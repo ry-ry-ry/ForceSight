@@ -264,7 +264,16 @@ export default function App() {
 
             {mode === 'edit' && selected && (
               <div className="animate-fade-in">
-                <UnitForm unit={selected} onDone={() => setMode('view')} />
+                <UnitForm unit={selected} onDone={async () => {
+                  // Refresh the selected unit from the database to get updated fields
+                  try {
+                    const updatedUnit = await db.units.get(selected.id);
+                    if (updatedUnit) {
+                      setSelected(updatedUnit);
+                    }
+                  } catch {}
+                  setMode('view');
+                }} />
               </div>
             )}
 

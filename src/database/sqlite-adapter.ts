@@ -1,7 +1,7 @@
 import type {
     DatabaseAdapter, TableAdapter, WhereClause, QueryAdapter,
     Unit, Deployment, Operation, Mission, TaskForce,
-    MapIcon, MapPin, MapShape, BackupData
+    MapIcon, MapPin, MapShape, NatoSymbol, BackupData
 } from './types';
 
 // sql.js types (loaded dynamically)
@@ -29,6 +29,9 @@ const TABLE_SCHEMAS: Record<string, string> = {
         locationLat REAL,
         locationLng REAL,
         patch TEXT,
+        natoSymbol TEXT,
+        affiliation TEXT,
+        sizeSymbolOverride TEXT,
         createdAt INTEGER NOT NULL
     )`,
     deployments: `CREATE TABLE IF NOT EXISTS deployments (
@@ -92,6 +95,13 @@ const TABLE_SCHEMAS: Record<string, string> = {
         description TEXT,
         createdAt INTEGER NOT NULL
     )`,
+    natoSymbols: `CREATE TABLE IF NOT EXISTS natoSymbols (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        code TEXT,
+        image TEXT NOT NULL,
+        createdAt INTEGER NOT NULL
+    )`,
 };
 
 const MIGRATIONS_TABLE = `CREATE TABLE IF NOT EXISTS _migrations (
@@ -102,7 +112,7 @@ const MIGRATIONS_TABLE = `CREATE TABLE IF NOT EXISTS _migrations (
 // ── Column lists per table (for INSERT generation) ────────────────────────────
 
 const TABLE_COLUMNS: Record<string, string[]> = {
-    units: ['id', 'name', 'type', 'echelon', 'country', 'status', 'health', 'effectiveness', 'parentId', 'taskForceId', 'lastRTBDate', 'locationLat', 'locationLng', 'patch', 'createdAt'],
+    units: ['id', 'name', 'type', 'echelon', 'country', 'status', 'health', 'effectiveness', 'parentId', 'taskForceId', 'lastRTBDate', 'locationLat', 'locationLng', 'patch', 'natoSymbol', 'affiliation', 'sizeSymbolOverride', 'createdAt'],
     deployments: ['id', 'unitId', 'name', 'operation', 'operationId', 'startDate', 'endDate'],
     operations: ['id', 'name', 'type', 'description', 'startDate', 'endDate', 'status', 'createdAt'],
     missions: ['id', 'unitId', 'operationId', 'name', 'type', 'startDate', 'endDate', 'description'],
@@ -110,6 +120,7 @@ const TABLE_COLUMNS: Record<string, string[]> = {
     mapIcons: ['id', 'name', 'image', 'createdAt'],
     mapPins: ['id', 'name', 'iconId', 'lat', 'lng', 'description', 'properties', 'createdAt'],
     mapShapes: ['id', 'name', 'type', 'coordinates', 'style', 'description', 'createdAt'],
+    natoSymbols: ['id', 'name', 'code', 'image', 'createdAt'],
 };
 
 // ── OPFS persistence helpers ──────────────────────────────────────────────────
@@ -301,6 +312,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
     mapIcons!: TableAdapter<MapIcon>;
     mapPins!: TableAdapter<MapPin>;
     mapShapes!: TableAdapter<MapShape>;
+    natoSymbols!: TableAdapter<NatoSymbol>;
 
     async init(): Promise<void> {
         // Dynamically import sql.js
@@ -318,6 +330,9 @@ export class SQLiteAdapter implements DatabaseAdapter {
         for (const sql of Object.values(TABLE_SCHEMAS)) {
             this.sqlDb.run(sql);
         }
+
+        // Run migrations for existing databases
+        await this.runMigrations();
 
         // Record migration version
         this.sqlDb.run(
@@ -340,6 +355,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
         this.mapIcons = sqliteTable<MapIcon>(getDb, 'mapIcons', TABLE_COLUMNS.mapIcons, notify, scheduleSave);
         this.mapPins = sqliteTable<MapPin>(getDb, 'mapPins', TABLE_COLUMNS.mapPins, notify, scheduleSave);
         this.mapShapes = sqliteTable<MapShape>(getDb, 'mapShapes', TABLE_COLUMNS.mapShapes, notify, scheduleSave);
+        this.natoSymbols = sqliteTable<NatoSymbol>(getDb, 'natoSymbols', TABLE_COLUMNS.natoSymbols, notify, scheduleSave);
 
         // Initial save
         await this.persistNow();
@@ -348,6 +364,22 @@ export class SQLiteAdapter implements DatabaseAdapter {
     private scheduleSave(): void {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this.persistNow(), 500);
+    }
+
+    private async runMigrations(): Promise<void> {
+        // Migration 1: Add NATO symbol columns to units table
+        const columns = this.sqlDb!.exec("PRAGMA table_info(units)");
+        const columnNames = columns[0]?.values?.map((v: any[]) => v[1]) || [];
+
+        if (!columnNames.includes('natoSymbol')) {
+            this.sqlDb!.run('ALTER TABLE units ADD COLUMN natoSymbol TEXT');
+        }
+        if (!columnNames.includes('affiliation')) {
+            this.sqlDb!.run('ALTER TABLE units ADD COLUMN affiliation TEXT');
+        }
+        if (!columnNames.includes('sizeSymbolOverride')) {
+            this.sqlDb!.run('ALTER TABLE units ADD COLUMN sizeSymbolOverride TEXT');
+        }
     }
 
     private async persistNow(): Promise<void> {
@@ -365,7 +397,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
 
     async exportAll(): Promise<BackupData> {
         return {
-            version: 6,
+            version: 7,
             timestamp: new Date().toISOString(),
             data: {
                 units: await this.units.toArray(),
@@ -376,6 +408,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
                 mapIcons: await this.mapIcons.toArray(),
                 mapPins: await this.mapPins.toArray(),
                 mapShapes: await this.mapShapes.toArray(),
+                natoSymbols: await this.natoSymbols.toArray(),
             }
         };
     }
@@ -394,6 +427,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
         if (src.mapIcons?.length) await this.mapIcons.bulkPut(src.mapIcons);
         if (src.mapPins?.length) await this.mapPins.bulkPut(src.mapPins);
         if (src.mapShapes?.length) await this.mapShapes.bulkPut(src.mapShapes);
+        if (src.natoSymbols?.length) await this.natoSymbols.bulkPut(src.natoSymbols);
     }
 
     async clearAll(): Promise<void> {
@@ -445,6 +479,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
         this.mapIcons = sqliteTable<MapIcon>(getDb, 'mapIcons', TABLE_COLUMNS.mapIcons, notify, scheduleSave);
         this.mapPins = sqliteTable<MapPin>(getDb, 'mapPins', TABLE_COLUMNS.mapPins, notify, scheduleSave);
         this.mapShapes = sqliteTable<MapShape>(getDb, 'mapShapes', TABLE_COLUMNS.mapShapes, notify, scheduleSave);
+        this.natoSymbols = sqliteTable<NatoSymbol>(getDb, 'natoSymbols', TABLE_COLUMNS.natoSymbols, notify, scheduleSave);
 
         // Persist and notify
         await this.persistNow();

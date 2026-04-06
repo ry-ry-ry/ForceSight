@@ -1,6 +1,7 @@
 import { db, useLiveData } from '../database/adapter';
 import { useState } from 'react';
-import { today, getEffectivePatch } from '../utils';
+import { today } from '../utils';
+import { UnitIcon } from './UnitIcon';
 
 export default function OperationsManager({ onSelectUnit }: any) {
     const [editing, setEditing] = useState<string | null>(null);
@@ -611,19 +612,11 @@ function OperationCard({ operation, units, deployments, taskForces, onEdit, onDe
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
-                                        {getEffectivePatch(unit, units) && (
-                                            <img
-                                                src={getEffectivePatch(unit, units)}
-                                                alt={unit.name}
-                                                style={{
-                                                    width: 32,
-                                                    height: 32,
-                                                    objectFit: 'contain',
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    border: '1px solid var(--color-border-accent)'
-                                                }}
-                                            />
-                                        )}
+                                        <UnitIcon
+                                            unit={unit}
+                                            allUnits={units}
+                                            size="small"
+                                        />
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{
                                                 fontSize: 13,
@@ -881,19 +874,11 @@ function TaskForceCard({ taskForce, units, onEdit, onDelete, onSelectUnit }: any
                                     e.currentTarget.style.borderColor = 'var(--color-border-primary)';
                                 }}
                             >
-                                {getEffectivePatch(unit, units) && (
-                                    <img
-                                        src={getEffectivePatch(unit, units)}
-                                        alt={unit.name}
-                                        style={{
-                                            width: 16,
-                                            height: 16,
-                                            objectFit: 'contain',
-                                            borderRadius: 2,
-                                            border: '1px solid var(--color-border-accent)'
-                                        }}
-                                    />
-                                )}
+                                <UnitIcon
+                                    unit={unit}
+                                    allUnits={units}
+                                    size="tiny"
+                                />
                                 <span>{unit.name}</span>
                             </div>
                         ))}
@@ -1031,19 +1016,11 @@ function TaskForceForm({ taskForce, operationId, units, onDone }: any) {
                                             checked={selectedUnits.includes(unit.id)}
                                             onChange={() => toggleUnit(unit.id)}
                                         />
-                                        {getEffectivePatch(unit, units) && (
-                                            <img
-                                                src={getEffectivePatch(unit, units)}
-                                                alt={unit.name}
-                                                style={{
-                                                    width: 24,
-                                                    height: 24,
-                                                    objectFit: 'contain',
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    border: '1px solid var(--color-border-accent)'
-                                                }}
-                                            />
-                                        )}
+                                        <UnitIcon
+                                            unit={unit}
+                                            allUnits={units}
+                                            size="small"
+                                        />
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 600 }}>{unit.name}</div>
                                             <div style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>

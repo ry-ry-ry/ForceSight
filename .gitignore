@@ -26,3 +26,7 @@ public/sql-wasm.wasm
 *.sln
 *.sw?
 DOCUMENTATION.md
+research.md
+.gitignore
+plan.md
+src/app-6.md

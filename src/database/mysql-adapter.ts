@@ -1,7 +1,7 @@
 import type {
     DatabaseAdapter, TableAdapter, WhereClause, QueryAdapter,
     Unit, Deployment, Operation, Mission, TaskForce,
-    MapIcon, MapPin, MapShape, BackupData
+    MapIcon, MapPin, MapShape, NatoSymbol, BackupData
 } from './types';
 
 // ── MySQL REST proxy adapter ──────────────────────────────────────────────────
@@ -20,7 +20,7 @@ import type {
 //   GET    /api/units?field=value → filtered query
 //   GET    /api/units?orderBy=x   → ordered query
 
-const TABLE_NAMES = ['units', 'deployments', 'operations', 'missions', 'taskForces', 'mapIcons', 'mapPins', 'mapShapes'] as const;
+const TABLE_NAMES = ['units', 'deployments', 'operations', 'missions', 'taskForces', 'mapIcons', 'mapPins', 'mapShapes', 'natoSymbols'] as const;
 
 function mysqlTable<T extends { id: string }>(
     baseUrl: string,
@@ -106,6 +106,7 @@ export class MySQLAdapter implements DatabaseAdapter {
     mapIcons!: TableAdapter<MapIcon>;
     mapPins!: TableAdapter<MapPin>;
     mapShapes!: TableAdapter<MapShape>;
+    natoSymbols!: TableAdapter<NatoSymbol>;
 
     constructor(mysqlUrl: string) {
         this.baseUrl = mysqlUrl.replace(/\/+$/, '');
@@ -125,6 +126,7 @@ export class MySQLAdapter implements DatabaseAdapter {
         this.mapIcons = mysqlTable<MapIcon>(this.baseUrl, 'mapIcons', notify);
         this.mapPins = mysqlTable<MapPin>(this.baseUrl, 'mapPins', notify);
         this.mapShapes = mysqlTable<MapShape>(this.baseUrl, 'mapShapes', notify);
+        this.natoSymbols = mysqlTable<NatoSymbol>(this.baseUrl, 'natoSymbols', notify);
 
         // Verify connection by fetching unit count
         try {
@@ -140,7 +142,7 @@ export class MySQLAdapter implements DatabaseAdapter {
 
     async exportAll(): Promise<BackupData> {
         return {
-            version: 6,
+            version: 7,
             timestamp: new Date().toISOString(),
             data: {
                 units: await this.units.toArray(),
@@ -151,6 +153,7 @@ export class MySQLAdapter implements DatabaseAdapter {
                 mapIcons: await this.mapIcons.toArray(),
                 mapPins: await this.mapPins.toArray(),
                 mapShapes: await this.mapShapes.toArray(),
+                natoSymbols: await this.natoSymbols.toArray(),
             }
         };
     }

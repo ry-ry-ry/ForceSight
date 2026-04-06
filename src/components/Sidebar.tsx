@@ -1,7 +1,8 @@
 import { db, useLiveData } from '../database/adapter';
 import React, { useState } from 'react';
 import type { Unit } from '../database/types';
-import { militaryNameCompare, getEffectivePatch } from '../utils';
+import { militaryNameCompare } from '../utils';
+import { UnitIcon } from './UnitIcon';
 
 export default function Sidebar({ select }: any) {
     const [search, setSearch] = useState('');
@@ -21,6 +22,7 @@ export default function Sidebar({ select }: any) {
     const units = useLiveData(() => db.units.toArray(), []);
     const deployments = useLiveData(() => db.deployments.toArray(), []);
     const operations = useLiveData(() => db.operations.toArray(), []);
+    const customSymbols = useLiveData(() => db.natoSymbols.toArray(), []);
 
     const toggleType = (type: string) => {
         const newExpanded = new Set(expandedTypes);
@@ -254,19 +256,12 @@ export default function Sidebar({ select }: any) {
                     )}
                     {!hasChildren && <span style={{ width: 16 }} />}
 
-                    {getEffectivePatch(u, units) && (
-                        <img
-                            src={getEffectivePatch(u, units)}
-                            alt={`${u.name} patch`}
-                            style={{
-                                width: 32,
-                                height: 32,
-                                objectFit: 'contain',
-                                borderRadius: 'var(--radius-sm)',
-                                border: '1px solid var(--color-border-accent)'
-                            }}
-                        />
-                    )}
+                    <UnitIcon
+                        unit={u}
+                        allUnits={units}
+                        customSymbols={customSymbols}
+                        size="small"
+                    />
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{

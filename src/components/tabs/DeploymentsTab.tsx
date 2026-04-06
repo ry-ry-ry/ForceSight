@@ -1,7 +1,8 @@
 import { db, useLiveData } from '../../database/adapter';
 import type { Unit } from '../../database/types';
-import { today, daysBetween, militaryNameCompare, getEffectivePatch } from '../../utils';
+import { today, daysBetween, militaryNameCompare } from '../../utils';
 import { useState } from 'react';
+import { UnitIcon } from '../UnitIcon';
 
 export default function DeploymentsTab({ unit }: any) {
     const [editing, setEditing] = useState<string | null>(null);
@@ -256,20 +257,11 @@ function SubordinateTree({ parentId, allUnits, selectedIds, onToggle, depth = 0 
                                 style={{ accentColor: 'var(--color-accent-primary)', flexShrink: 0 }}
                             />
                             <span style={{ color: 'var(--color-accent-primary)', fontSize: 12, flexShrink: 0 }}>└─</span>
-                            {getEffectivePatch(sub, allUnits) && (
-                                <img
-                                    src={getEffectivePatch(sub, allUnits)}
-                                    alt={`${sub.name} patch`}
-                                    style={{
-                                        width: 28,
-                                        height: 28,
-                                        objectFit: 'contain',
-                                        borderRadius: 'var(--radius-sm)',
-                                        border: '1px solid var(--color-border-accent)',
-                                        flexShrink: 0
-                                    }}
-                                />
-                            )}
+                            <UnitIcon
+                                unit={sub}
+                                allUnits={allUnits}
+                                size="small"
+                            />
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: hasChildren ? 600 : 'normal', fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {sub.name}

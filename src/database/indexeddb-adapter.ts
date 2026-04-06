@@ -3,7 +3,7 @@ import type { Table } from 'dexie';
 import type {
     DatabaseAdapter, TableAdapter, WhereClause, QueryAdapter,
     Unit, Deployment, Operation, Mission, TaskForce,
-    MapIcon, MapPin, MapShape, BackupData
+    MapIcon, MapPin, MapShape, NatoSymbol, BackupData
 } from './types';
 
 // ── Dexie schema (preserves all existing versions for seamless upgrade) ───────
@@ -17,6 +17,7 @@ class ForceSightDexie extends Dexie {
     mapIcons!: Table<MapIcon, string>;
     mapPins!: Table<MapPin, string>;
     mapShapes!: Table<MapShape, string>;
+    natoSymbols!: Table<NatoSymbol, string>;
 
     constructor() {
         super('unitDB');
@@ -61,6 +62,17 @@ class ForceSightDexie extends Dexie {
             mapIcons: 'id, name',
             mapPins: 'id, name, iconId',
             mapShapes: 'id, name, type'
+        });
+        this.version(9).stores({
+            units: 'id, name, parentId, echelon, country, taskForceId',
+            deployments: 'id, unitId, operationId',
+            operations: 'id, name, status, startDate',
+            missions: 'id, unitId, operationId',
+            taskForces: 'id, name, operationId',
+            mapIcons: 'id, name',
+            mapPins: 'id, name, iconId',
+            mapShapes: 'id, name, type',
+            natoSymbols: 'id, name'
         });
     }
 }
@@ -120,6 +132,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
     mapIcons!: TableAdapter<MapIcon>;
     mapPins!: TableAdapter<MapPin>;
     mapShapes!: TableAdapter<MapShape>;
+    natoSymbols!: TableAdapter<NatoSymbol>;
 
     async init(): Promise<void> {
         this.dexie = new ForceSightDexie();
@@ -138,6 +151,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
         this.mapIcons = wrapTable(this.dexie.mapIcons, notify);
         this.mapPins = wrapTable(this.dexie.mapPins, notify);
         this.mapShapes = wrapTable(this.dexie.mapShapes, notify);
+        this.natoSymbols = wrapTable(this.dexie.natoSymbols, notify);
     }
 
     async close(): Promise<void> {
@@ -148,7 +162,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
     async exportAll(): Promise<BackupData> {
         const d = this.dexie!;
         return {
-            version: 6,
+            version: 7,
             timestamp: new Date().toISOString(),
             data: {
                 units: await d.units.toArray(),
@@ -159,6 +173,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
                 mapIcons: await d.mapIcons.toArray(),
                 mapPins: await d.mapPins.toArray(),
                 mapShapes: await d.mapShapes.toArray(),
+                natoSymbols: await d.natoSymbols.toArray(),
             }
         };
     }
@@ -169,7 +184,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
 
         await d.transaction('rw',
             [d.units, d.deployments, d.operations, d.missions, d.taskForces,
-             d.mapIcons, d.mapPins, d.mapShapes],
+             d.mapIcons, d.mapPins, d.mapShapes, d.natoSymbols],
             async () => {
                 if (mode === 'replace') {
                     await d.units.clear();
@@ -180,6 +195,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
                     await d.mapIcons.clear();
                     await d.mapPins.clear();
                     await d.mapShapes.clear();
+                    await d.natoSymbols.clear();
                 }
 
                 if (src.units?.length) await d.units.bulkPut(src.units);
@@ -190,6 +206,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
                 if (src.mapIcons?.length) await d.mapIcons.bulkPut(src.mapIcons);
                 if (src.mapPins?.length) await d.mapPins.bulkPut(src.mapPins);
                 if (src.mapShapes?.length) await d.mapShapes.bulkPut(src.mapShapes);
+                if (src.natoSymbols?.length) await d.natoSymbols.bulkPut(src.natoSymbols);
             }
         );
 
@@ -201,7 +218,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
         const d = this.dexie!;
         await d.transaction('rw',
             [d.units, d.deployments, d.operations, d.missions, d.taskForces,
-             d.mapIcons, d.mapPins, d.mapShapes],
+             d.mapIcons, d.mapPins, d.mapShapes, d.natoSymbols],
             async () => {
                 await d.units.clear();
                 await d.deployments.clear();
@@ -211,6 +228,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
                 await d.mapIcons.clear();
                 await d.mapPins.clear();
                 await d.mapShapes.clear();
+                await d.natoSymbols.clear();
             }
         );
         this.version++;

@@ -1,10 +1,12 @@
 import { db, useLiveData } from '../database/adapter';
 import { useEffect, useState } from 'react';
-import { calculateRotationStatus, getEffectivePatch } from '../utils';
+import { calculateRotationStatus } from '../utils';
+import { UnitIcon } from './UnitIcon';
 
 export default function Dashboard({ onSelectUnit }: any) {
     const units = useLiveData(() => db.units.toArray(), []);
     const deployments = useLiveData(() => db.deployments.toArray(), []);
+    const customSymbols = useLiveData(() => db.natoSymbols.toArray(), []);
     const [time, setTime] = useState(new Date());
 
     useEffect(() => {
@@ -177,6 +179,7 @@ export default function Dashboard({ onSelectUnit }: any) {
                                     onSelect={() => onSelectUnit(item!.unit)}
                                     delay={0.6 + index * 0.05}
                                     allUnits={units}
+                                    customSymbols={customSymbols}
                                 />
                             ))}
                         </div>
@@ -226,19 +229,12 @@ export default function Dashboard({ onSelectUnit }: any) {
                                         e.currentTarget.style.transform = 'translateX(0)';
                                     }}
                                 >
-                                    {getEffectivePatch(unit, units) && (
-                                        <img
-                                            src={getEffectivePatch(unit, units)}
-                                            alt={unit.name}
-                                            style={{
-                                                width: 40,
-                                                height: 40,
-                                                objectFit: 'contain',
-                                                borderRadius: 'var(--radius-sm)',
-                                                border: '1px solid var(--color-border-accent)'
-                                            }}
-                                        />
-                                    )}
+                                    <UnitIcon
+                                        unit={unit}
+                                        allUnits={units}
+                                        customSymbols={customSymbols}
+                                        size="small"
+                                    />
                                     <div style={{ flex: 1 }}>
                                         <div style={{
                                             fontWeight: 600,
@@ -392,7 +388,7 @@ function StatusBar({ label, value, total, color }: any) {
     );
 }
 
-function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUnits }: any) {
+function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUnits, customSymbols }: any) {
     const getStatusLabel = () => {
         switch (rotationStatus.status) {
             case 'overdue':
@@ -459,19 +455,12 @@ function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUn
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-                {getEffectivePatch(unit, allUnits) && (
-                    <img
-                        src={getEffectivePatch(unit, allUnits)}
-                        alt={unit.name}
-                        style={{
-                            width: 48,
-                            height: 48,
-                            objectFit: 'contain',
-                            borderRadius: 'var(--radius-sm)',
-                            border: '1px solid var(--color-border-accent)'
-                        }}
-                    />
-                )}
+                <UnitIcon
+                    unit={unit}
+                    allUnits={allUnits}
+                    customSymbols={customSymbols}
+                    size="medium"
+                />
 
                 <div style={{ flex: 1 }}>
                     <div style={{

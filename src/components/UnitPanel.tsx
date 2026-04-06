@@ -2,14 +2,16 @@ import { useState, lazy, Suspense } from 'react';
 import OverviewTab from './tabs/OverviewTab';
 import DeploymentsTab from './tabs/DeploymentsTab';
 import MissionsTab from './tabs/MissionsTab';
-import { getEffectivenessInfo, getHealthColor, getEffectivePatch } from '../utils';
+import { getEffectivenessInfo, getHealthColor } from '../utils';
 import { db, useLiveData } from '../database/adapter';
+import { UnitIcon } from './UnitIcon';
 
 const MapTab = lazy(() => import('./tabs/MapTab'));
 
 export default function UnitPanel({ unit, onEdit, onSelectUnit, onAddSubordinate }: any) {
     const [tab, setTab] = useState<'overview' | 'deployments' | 'missions' | 'map'>('overview');
     const allUnits = useLiveData(() => db.units.toArray(), []);
+    const customSymbols = useLiveData(() => db.natoSymbols.toArray(), []);
 
     return (
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -90,25 +92,17 @@ export default function UnitPanel({ unit, onEdit, onSelectUnit, onAddSubordinate
                             )}
                         </div>
                     </div>
-                    {getEffectivePatch(unit, allUnits) && (
-                        <img
-                            src={getEffectivePatch(unit, allUnits)}
-                            alt={`${unit.name} patch`}
-                            style={{
-                                width: 100,
-                                height: 100,
-                                objectFit: 'contain',
-                                borderRadius: 'var(--radius-md)',
-                                marginLeft: 'var(--spacing-xl)',
-                                border: '2px solid var(--color-border-accent)',
-                                padding: 'var(--spacing-sm)',
-                                background: 'var(--color-bg-tertiary)'
-                            }}
+                    <div style={{ marginLeft: 'var(--spacing-xl)', display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
+                        <UnitIcon
+                            unit={unit}
+                            allUnits={allUnits}
+                            customSymbols={customSymbols}
+                            size="large"
                         />
-                    )}
-                    <button onClick={onEdit} style={{ marginLeft: 'var(--spacing-lg)' }}>
-                        Edit Unit
-                    </button>
+                        <button onClick={onEdit}>
+                            Edit Unit
+                        </button>
+                    </div>
                 </div>
 
                 <div className="tactical-divider" style={{ margin: 'var(--spacing-lg) 0' }}></div>
