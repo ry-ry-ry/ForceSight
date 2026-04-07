@@ -34719,8 +34719,13 @@ export function getNatoSymbolDataUrl(code: string, affiliation: Affiliation, siz
 
 export function searchNatoSymbols(query: string): NatoSymbolEntry[] {
     const lowerQuery = query.toLowerCase().trim();
-    if (!lowerQuery) return NATO_SYMBOLS.slice(0, 100);
-    return NATO_SYMBOLS.filter(entry =>
+
+    // Deduplicate: position 1 of the code is affiliation (f/h/n/u), but milsymbol
+    // handles affiliation coloring dynamically, so only return friendly variants
+    const dedupedSymbols = NATO_SYMBOLS.filter(entry => entry.code[1] === 'f');
+
+    if (!lowerQuery) return dedupedSymbols.slice(0, 100);
+    return dedupedSymbols.filter(entry =>
         entry.name.toLowerCase().includes(lowerQuery) ||
         entry.tags.some(tag => tag.includes(lowerQuery)) ||
         entry.code.includes(lowerQuery)
