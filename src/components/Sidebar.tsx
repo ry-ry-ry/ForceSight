@@ -7,7 +7,7 @@ import { UnitIcon } from './UnitIcon';
 export default function Sidebar({ select }: any) {
     const [search, setSearch] = useState('');
     const [sortBy, setSortBy] = useState<'name' | 'status' | 'echelon' | 'created'>('name');
-    const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['Ground', 'Air', 'SOF', 'Support']));
+    const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['Bases', 'Ground', 'Air', 'SOF', 'Support']));
     const [expandedUnits, setExpandedUnits] = useState<Set<string>>(new Set());
     const [showFilters, setShowFilters] = useState(false);
 
@@ -146,6 +146,7 @@ export default function Sidebar({ select }: any) {
 
     const groupByType = (unitsToGroup: Unit[]) => {
         const groups: Record<string, Unit[]> = {
+            Bases: [],
             Ground: [],
             Air: [],
             SOF: [],
@@ -159,6 +160,10 @@ export default function Sidebar({ select }: any) {
 
         unitsToGroup.forEach(u => {
             if (u.type === 'Command') return; // Skip Commands
+            if (u.type === 'Base') {
+                groups['Bases'].push(u);
+                return;
+            }
 
             if (hasActiveFilters) {
                 // Flat mode: every matching unit appears as a root entry

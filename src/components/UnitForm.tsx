@@ -42,11 +42,13 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
 
     // Reset echelon to first available when country changes if current echelon isn't valid
     useEffect(() => {
+        if (type === 'Base') return; // Bases don't have echelons
         const availableEchelons = getEchelonsForCountry(country);
         if (!availableEchelons.includes(echelon)) {
             setEchelon(availableEchelons[0] || 'Battalion');
         }
-    }, [country, echelon]);
+    }, [country, echelon, type]);
+
     const [parentId, setParentId] = useState(unit?.parentId || defaults?.parentId || '');
     const [attached, setAttached] = useState<boolean>(unit?.attached ?? false);
     const [patch, setPatch] = useState(unit?.patch || '');
@@ -60,6 +62,11 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
     const [sizeSymbolOverride, setSizeSymbolOverride] = useState<string>(unit?.sizeSymbolOverride || '');
     const [symbolSearch, setSymbolSearch] = useState('');
     const [showSymbolDropdown, setShowSymbolDropdown] = useState(false);
+    // Base-specific fields
+    const [location, setLocation] = useState(unit?.location || '');
+    const [baseId, setBaseId] = useState(unit?.baseId || '');
+
+    const isBase = type === 'Base';
 
     const allUnits = useLiveData(() => db.units.toArray(), []);
 
@@ -141,7 +148,8 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const maxSize = 200;
+                // Base photographs should be high quality, unit patches can be smaller
+                const maxSize = isBase ? 1200 : 200;
                 let width = img.width;
                 let height = img.height;
 
@@ -177,19 +185,21 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                 id: unitId,
                 name,
                 type,
-                echelon,
+                echelon: isBase ? undefined : echelon,
                 country: country || undefined,
-                status,
+                status: isBase ? 'Active' : status,  // Bases get 'Active' status
                 health,
-                effectiveness,
-                parentId: parentId || undefined,
-                attached: attached,
+                effectiveness: isBase ? undefined : effectiveness,
+                parentId: isBase ? undefined : (parentId || undefined),
+                attached: isBase ? undefined : attached,
                 taskForceId: unit?.taskForceId || undefined,
                 patch: patch || undefined,
                 lastRTBDate: rtb || undefined,
-                natoSymbol: natoSymbol || undefined,
-                affiliation: affiliation || undefined,
-                sizeSymbolOverride: sizeSymbolOverride || undefined,
+                natoSymbol: isBase ? undefined : (natoSymbol || undefined),
+                affiliation: isBase ? undefined : (affiliation || undefined),
+                sizeSymbolOverride: isBase ? undefined : (sizeSymbolOverride || undefined),
+                location: isBase ? (location || undefined) : undefined,
+                baseId: isBase ? undefined : (baseId || undefined),
                 createdAt: unit?.createdAt || now
             });
 
@@ -227,17 +237,17 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
 
     return (
         <div className="card">
-            <h2>{unit ? 'Edit Unit' : 'Create Unit'}</h2>
+            <h2>{unit ? (isBase ? 'Edit Base' : 'Edit Unit') : (isBase ? 'Create Base' : 'Create Unit')}</h2>
 
             <div style={{ display: 'grid', gap: 16, marginTop: 16 }}>
 
                 <div>
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
-                        Unit Name
+                        {isBase ? 'Base Name' : 'Unit Name'}
                     </label>
                     <input
                         className="input"
-                        placeholder="Enter unit name"
+                        placeholder={isBase ? 'Enter base name (e.g., Fort Bragg)' : 'Enter unit name'}
                         value={name}
                         onChange={e => setName(e.target.value)}
                     />
@@ -254,6 +264,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                             onChange={e => setType(e.target.value)}
                             style={{ width: '100%' }}
                         >
+                            <option>Base</option>
                             <option>Command</option>
                             <option>Ground</option>
                             <option>Air</option>
@@ -262,22 +273,40 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         </select>
                     </div>
 
+                    {/* Echelon - only for non-Base units */}
+                    {!isBase && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                                Echelon
+                            </label>
+                            <select
+                                className="input"
+                                value={echelon}
+                                onChange={e => setEchelon(e.target.value)}
+                                style={{ width: '100%' }}
+                            >
+                                {getEchelonsForCountry(country).map(e => (
+                                    <option key={e} value={e}>{e}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </div>
+
+                {/* Location - only for Bases */}
+                {isBase && (
                     <div>
                         <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
-                            Echelon
+                            Location
                         </label>
-                        <select
+                        <input
                             className="input"
-                            value={echelon}
-                            onChange={e => setEchelon(e.target.value)}
-                            style={{ width: '100%' }}
-                        >
-                            {getEchelonsForCountry(country).map(e => (
-                                <option key={e} value={e}>{e}</option>
-                            ))}
-                        </select>
+                            placeholder="e.g., North Carolina, United States"
+                            value={location}
+                            onChange={e => setLocation(e.target.value)}
+                        />
                     </div>
-                </div>
+                )}
 
                 <div>
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
@@ -296,24 +325,28 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                     </select>
                 </div>
 
-                <div>
-                    <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
-                        Status
-                    </label>
-                    <select
-                        className="input"
-                        value={status}
-                        onChange={e => setStatus(e.target.value)}
-                        style={{ width: '100%' }}
-                    >
-                        <option>Standby</option>
-                        <option>Deployed</option>
-                        <option>Training</option>
-                        <option>Reset</option>
-                    </select>
-                </div>
+                {/* Status - only for non-Base units */}
+                {!isBase && (
+                    <div>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                            Status
+                        </label>
+                        <select
+                            className="input"
+                            value={status}
+                            onChange={e => setStatus(e.target.value)}
+                            style={{ width: '100%' }}
+                        >
+                            <option>Standby</option>
+                            <option>Deployed</option>
+                            <option>Training</option>
+                            <option>Reset</option>
+                        </select>
+                    </div>
+                )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {/* Health - shared by both units and bases */}
+                <div style={{ display: 'grid', gridTemplateColumns: !isBase ? '1fr 1fr' : '1fr', gap: 12 }}>
                     <div>
                         <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
                             Health
@@ -330,28 +363,30 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         </select>
                     </div>
 
-                    <div>
-                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
-                            Effectiveness
-                        </label>
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--spacing-sm)'
-                        }}>
-                            <input
-                                type="range"
-                                min={0}
-                                max={100}
-                                step={10}
-                                value={effectiveness}
-                                onChange={e => setEffectiveness(Number(e.target.value))}
-                                style={{
-                                    flex: 1,
-                                    accentColor: getEffectivenessInfo(effectiveness).color,
-                                    cursor: 'pointer'
-                                }}
-                            />
+                    {/* Effectiveness - only for non-Base units */}
+                    {!isBase && (
+                        <div>
+                            <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                                Effectiveness
+                            </label>
+                            <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 'var(--spacing-sm)'
+                            }}>
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={10}
+                                    value={effectiveness}
+                                    onChange={e => setEffectiveness(Number(e.target.value))}
+                                    style={{
+                                        flex: 1,
+                                        accentColor: getEffectivenessInfo(effectiveness).color,
+                                        cursor: 'pointer'
+                                    }}
+                                />
                             <span style={{
                                 fontFamily: 'var(--font-mono)',
                                 fontSize: 13,
@@ -372,14 +407,37 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                             {getEffectivenessInfo(effectiveness).label}
                         </div>
                     </div>
+                    )}
                 </div>
 
-                <div>
-                    <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
-                        Parent Unit
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                        {selectedParent ? (
+                {/* Base assignment - only for non-Base units */}
+                {!isBase && (
+                    <div>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                            Stationed At (Base)
+                        </label>
+                        <select
+                            className="input"
+                            value={baseId}
+                            onChange={e => setBaseId(e.target.value)}
+                            style={{ width: '100%' }}
+                        >
+                            <option value="">No base assigned</option>
+                            {allUnits?.filter((u: any) => u.type === 'Base').map((b: any) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {/* Parent Unit - only for non-Base units */}
+                {!isBase && (
+                    <div>
+                        <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
+                            Parent Unit
+                        </label>
+                        <div style={{ position: 'relative' }}>
+                            {selectedParent ? (
                             <div
                                 onClick={() => {
                                     setParentId('');
@@ -510,9 +568,10 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         )}
                     </div>
                 </div>
+                )}
 
-                {/* Attachment option - shown when a parent is selected */}
-                {parentId && (
+                {/* Attachment option - shown when a parent is selected and not a Base */}
+                {!isBase && parentId && (
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -539,7 +598,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                 )}
 
                 {/* Inherit deployments from parent — shown when a parent is selected and there are deployments to copy */}
-                {parentId && availableParentDeployments.length > 0 && (
+                {!isBase && parentId && availableParentDeployments.length > 0 && (
                     <div style={{
                         padding: 'var(--spacing-md)',
                         background: 'var(--color-bg-tertiary)',
@@ -680,9 +739,10 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                     />
                 </div>
 
+                {/* Patch/Photograph */}
                 <div>
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
-                        Unit Patch
+                        {isBase ? 'Base Photograph' : 'Unit Patch'}
                     </label>
                     <input
                         type="file"
@@ -710,7 +770,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         }}>
                             <img
                                 src={patch}
-                                alt="Unit patch"
+                                alt={isBase ? 'Base photograph' : 'Unit patch'}
                                 style={{
                                     width: 80,
                                     height: 80,
@@ -719,12 +779,15 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                                     border: '1px solid #334155'
                                 }}
                             />
-                            <button onClick={() => setPatch('')}>Remove Patch</button>
+                            <button onClick={() => setPatch('')}>
+                                {isBase ? 'Remove Photograph' : 'Remove Patch'}
+                            </button>
                         </div>
                     )}
                 </div>
 
-                {/* NATO Symbol Section */}
+                {/* NATO Symbol Section - only for non-Base units */}
+                {!isBase && (
                 <div style={{
                     padding: 'var(--spacing-md)',
                     background: 'var(--color-bg-tertiary)',
@@ -955,6 +1018,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         </div>
                     )}
                 </div>
+                )}
 
             </div>
 
@@ -968,7 +1032,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                         onClick={remove}
                         style={{ background: '#991b1b', borderColor: '#b91c1c' }}
                     >
-                        Delete Unit
+                        {isBase ? 'Delete Base' : 'Delete Unit'}
                     </button>
                 )}
 
@@ -976,7 +1040,7 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                     onClick={save}
                     style={{ background: '#1e40af', borderColor: '#2563eb' }}
                 >
-                    {unit ? 'Save Changes' : 'Create Unit'}
+                    {unit ? 'Save Changes' : (isBase ? 'Create Base' : 'Create Unit')}
                 </button>
             </div>
         </div>

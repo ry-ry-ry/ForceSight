@@ -15,11 +15,14 @@ export interface Unit {
     lastRTBDate?: string;
     locationLat?: number;
     locationLng?: number;
-    patch?: string; // base64 encoded image
+    patch?: string; // base64 encoded image (unit patch or base photograph)
     // NATO symbol fields
     natoSymbol?: string; // APP-6 code (e.g., "sfgp" for infantry)
     affiliation?: 'friendly' | 'hostile' | 'neutral' | 'unknown';
     sizeSymbolOverride?: string; // manual override for echelon marker
+    // Base-specific fields
+    location?: string; // For bases: "City, Country" format
+    baseId?: string; // For units: reference to base they're stationed at
     createdAt: number;
 }
 

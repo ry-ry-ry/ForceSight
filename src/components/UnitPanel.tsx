@@ -2,6 +2,7 @@ import { useState, lazy, Suspense } from 'react';
 import OverviewTab from './tabs/OverviewTab';
 import DeploymentsTab from './tabs/DeploymentsTab';
 import MissionsTab from './tabs/MissionsTab';
+import BasePanel from './BasePanel';
 import { getEffectivenessInfo, getHealthColor } from '../utils';
 import { db, useLiveData } from '../database/adapter';
 import { UnitIcon } from './UnitIcon';
@@ -12,6 +13,11 @@ export default function UnitPanel({ unit, onEdit, onSelectUnit, onAddSubordinate
     const [tab, setTab] = useState<'overview' | 'deployments' | 'missions' | 'map'>('overview');
     const allUnits = useLiveData(() => db.units.toArray(), []);
     const customSymbols = useLiveData(() => db.natoSymbols.toArray(), []);
+
+    // If this is a Base, render BasePanel instead
+    if (unit.type === 'Base') {
+        return <BasePanel base={unit} onEdit={onEdit} onSelectUnit={onSelectUnit} />;
+    }
 
     return (
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -87,6 +93,26 @@ export default function UnitPanel({ unit, onEdit, onSelectUnit, onAddSubordinate
                                         letterSpacing: '0.5px'
                                     }}>
                                         {unit.effectiveness}% — {getEffectivenessInfo(unit.effectiveness).label}
+                                    </span>
+                                </>
+                            )}
+                            {unit.baseId && allUnits?.find((u: any) => u.id === unit.baseId) && (
+                                <>
+                                    <span style={{ color: 'var(--color-text-muted)' }}>•</span>
+                                    <span
+                                        onClick={() => onSelectUnit(allUnits.find((u: any) => u.id === unit.baseId))}
+                                        style={{
+                                            padding: '4px 8px',
+                                            borderRadius: 'var(--radius-sm)',
+                                            background: 'var(--color-bg-tertiary)',
+                                            color: 'var(--color-accent-primary)',
+                                            border: '1px solid var(--color-border-accent)',
+                                            fontWeight: 600,
+                                            fontSize: 11,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        📍 {allUnits.find((u: any) => u.id === unit.baseId)?.name}
                                     </span>
                                 </>
                             )}

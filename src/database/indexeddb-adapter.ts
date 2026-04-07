@@ -74,6 +74,17 @@ class ForceSightDexie extends Dexie {
             mapShapes: 'id, name, type',
             natoSymbols: 'id, name'
         });
+        this.version(10).stores({
+            units: 'id, name, parentId, echelon, country, taskForceId, baseId',
+            deployments: 'id, unitId, operationId',
+            operations: 'id, name, status, startDate',
+            missions: 'id, unitId, operationId',
+            taskForces: 'id, name, operationId',
+            mapIcons: 'id, name',
+            mapPins: 'id, name, iconId',
+            mapShapes: 'id, name, type',
+            natoSymbols: 'id, name'
+        });
     }
 }
 

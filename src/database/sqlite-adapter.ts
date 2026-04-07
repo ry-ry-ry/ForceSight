@@ -9,7 +9,7 @@ type SqlJsDatabase = any;
 type SqlJsStatic = any;
 
 const DB_FILE_NAME = 'forcesight.sqlite';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 // ── SQL table definitions ─────────────────────────────────────────────────────
 
@@ -33,6 +33,8 @@ const TABLE_SCHEMAS: Record<string, string> = {
         natoSymbol TEXT,
         affiliation TEXT,
         sizeSymbolOverride TEXT,
+        location TEXT,
+        baseId TEXT,
         createdAt INTEGER NOT NULL
     )`,
     deployments: `CREATE TABLE IF NOT EXISTS deployments (
@@ -113,7 +115,7 @@ const MIGRATIONS_TABLE = `CREATE TABLE IF NOT EXISTS _migrations (
 // ── Column lists per table (for INSERT generation) ────────────────────────────
 
 const TABLE_COLUMNS: Record<string, string[]> = {
-    units: ['id', 'name', 'type', 'echelon', 'country', 'status', 'health', 'effectiveness', 'parentId', 'attached', 'taskForceId', 'lastRTBDate', 'locationLat', 'locationLng', 'patch', 'natoSymbol', 'affiliation', 'sizeSymbolOverride', 'createdAt'],
+    units: ['id', 'name', 'type', 'echelon', 'country', 'status', 'health', 'effectiveness', 'parentId', 'attached', 'taskForceId', 'lastRTBDate', 'locationLat', 'locationLng', 'patch', 'natoSymbol', 'affiliation', 'sizeSymbolOverride', 'location', 'baseId', 'createdAt'],
     deployments: ['id', 'unitId', 'name', 'operation', 'operationId', 'startDate', 'endDate'],
     operations: ['id', 'name', 'type', 'description', 'startDate', 'endDate', 'status', 'createdAt'],
     missions: ['id', 'unitId', 'operationId', 'name', 'type', 'startDate', 'endDate', 'description'],
@@ -399,6 +401,13 @@ export class SQLiteAdapter implements DatabaseAdapter {
         }
         if (!columnNames.includes('attached')) {
             this.sqlDb!.run('ALTER TABLE units ADD COLUMN attached INTEGER');
+        }
+        // Migration 2: Add location and baseId columns for Bases feature
+        if (!columnNames.includes('location')) {
+            this.sqlDb!.run('ALTER TABLE units ADD COLUMN location TEXT');
+        }
+        if (!columnNames.includes('baseId')) {
+            this.sqlDb!.run('ALTER TABLE units ADD COLUMN baseId TEXT');
         }
     }
 
