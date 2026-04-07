@@ -4,13 +4,14 @@ import UnitPanel from './components/UnitPanel';
 import UnitForm from './components/UnitForm';
 import Dashboard from './components/Dashboard';
 import OperationsManager from './components/OperationsManager';
+import AdminPanel from './components/AdminPanel';
 import SettingsDialog from './components/SettingsDialog';
 import { getStoredTheme, applyTheme } from './theme';
 import { db } from './database/adapter';
 
 const MapPage = lazy(() => import('./components/MapPage'));
 
-type Mode = 'dashboard' | 'operations' | 'map' | 'view' | 'create' | 'edit';
+type Mode = 'dashboard' | 'operations' | 'map' | 'admin' | 'view' | 'create' | 'edit';
 
 // Parse URL hash to get mode and unit id
 function parseHash(): { mode: Mode; unitId: string | null } {
@@ -18,7 +19,7 @@ function parseHash(): { mode: Mode; unitId: string | null } {
   if (!hash) return { mode: 'dashboard', unitId: null };
 
   const [modePart, idPart] = hash.split('/');
-  const validModes: Mode[] = ['dashboard', 'operations', 'map', 'view', 'create', 'edit'];
+  const validModes: Mode[] = ['dashboard', 'operations', 'map', 'admin', 'view', 'create', 'edit'];
 
   if (validModes.includes(modePart as Mode)) {
     return { mode: modePart as Mode, unitId: idPart || null };
@@ -130,6 +131,9 @@ export default function App() {
       case 'map':
         title = `${base} — Map`;
         break;
+      case 'admin':
+        title = `${base} — Admin`;
+        break;
       case 'create':
         title = `${base} — New Unit`;
         break;
@@ -212,6 +216,17 @@ export default function App() {
           <button onClick={() => { setCreateDefaults(null); setMode('create'); }}>+ New Unit</button>
           <div style={{ flex: 1 }} />
           <button
+            onClick={() => setMode('admin')}
+            style={{
+              background: mode === 'admin' ? 'var(--color-accent-primary)' : 'var(--color-bg-elevated)',
+              borderColor: mode === 'admin' ? 'var(--color-accent-primary)' : 'var(--color-border-accent)',
+              color: mode === 'admin' ? 'var(--color-bg-primary)' : 'var(--color-text-primary)',
+              fontSize: 13,
+            }}
+          >
+            ⚙ Admin
+          </button>
+          <button
             onClick={() => setSettingsOpen(true)}
             style={{
               background: settingsOpen ? 'var(--color-accent-primary)' : 'var(--color-bg-elevated)',
@@ -242,6 +257,12 @@ export default function App() {
 
             {mode === 'operations' && (
               <OperationsManager onSelectUnit={selectUnit} />
+            )}
+
+            {mode === 'admin' && (
+              <div className="animate-fade-in">
+                <AdminPanel onClose={() => setMode('dashboard')} />
+              </div>
             )}
 
             {mode === 'create' && (

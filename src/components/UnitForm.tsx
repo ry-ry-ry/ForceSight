@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db, useLiveData } from '../database/adapter';
 import type { Deployment } from '../database/types';
 import { today, daysBetween, getEffectivenessInfo, getEffectivePatch } from '../utils';
+import { getConfig, DEFAULT_ECHELONS, AVAILABLE_COUNTRIES } from '../database/config';
 import {
     SIZE_SYMBOLS,
     searchNatoSymbols,
@@ -9,6 +10,13 @@ import {
     getNatoSymbolByCode,
     type Affiliation
 } from '../nato-symbol-library';
+
+// Get echelons available for a specific country
+function getEchelonsForCountry(country: string | undefined): string[] {
+    const config = getConfig();
+    if (!country) return DEFAULT_ECHELONS;
+    return config.countryEchelons?.[country] || DEFAULT_ECHELONS;
+}
 
 function inferEchelon(name: string): string {
     const lower = name.toLowerCase();
@@ -31,6 +39,14 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
     const [country, setCountry] = useState(unit?.country || defaults?.country || '');
     const [status, setStatus] = useState(unit?.status || 'Standby');
     const [rtb, setRtb] = useState(unit?.lastRTBDate || '');
+
+    // Reset echelon to first available when country changes if current echelon isn't valid
+    useEffect(() => {
+        const availableEchelons = getEchelonsForCountry(country);
+        if (!availableEchelons.includes(echelon)) {
+            setEchelon(availableEchelons[0] || 'Battalion');
+        }
+    }, [country, echelon]);
     const [parentId, setParentId] = useState(unit?.parentId || defaults?.parentId || '');
     const [attached, setAttached] = useState<boolean>(unit?.attached ?? false);
     const [patch, setPatch] = useState(unit?.patch || '');
@@ -256,29 +272,28 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
                             onChange={e => setEchelon(e.target.value)}
                             style={{ width: '100%' }}
                         >
-                            <option>Platoon</option>
-                            <option>Company</option>
-                            <option>Squadron</option>
-                            <option>Battalion</option>
-                            <option>Regiment</option>
-                            <option>Brigade</option>
-                            <option>Division</option>
-                            <option>Corps</option>
-                            <option>Command</option>
+                            {getEchelonsForCountry(country).map(e => (
+                                <option key={e} value={e}>{e}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
 
                 <div>
                     <label style={{ display: 'block', marginBottom: 6, fontSize: 14, color: '#9ca3af' }}>
-                        Country (Optional)
+                        Country
                     </label>
-                    <input
+                    <select
                         className="input"
-                        placeholder="e.g., United States, United Kingdom"
                         value={country}
                         onChange={e => setCountry(e.target.value)}
-                    />
+                        style={{ width: '100%' }}
+                    >
+                        <option value="">Select country...</option>
+                        {AVAILABLE_COUNTRIES.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
                 </div>
 
                 <div>

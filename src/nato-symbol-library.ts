@@ -9400,6 +9400,7 @@ export const SIZE_SYMBOLS: Record<string, { symbol: string; name: string }> = {
     'Section': { symbol: '•••', name: 'Section' },
     'Platoon': { symbol: 'I', name: 'Platoon' },
     'Company': { symbol: 'II', name: 'Company' },
+    'Squadron': { symbol: 'III', name: 'Squadron' },  // Cavalry equivalent to Battalion
     'Battalion': { symbol: 'III', name: 'Battalion' },
     'Regiment': { symbol: 'X', name: 'Regiment' },
     'Brigade': { symbol: 'XX', name: 'Brigade' },
@@ -9407,7 +9408,11 @@ export const SIZE_SYMBOLS: Record<string, { symbol: string; name: string }> = {
     'Corps': { symbol: 'XXXX', name: 'Corps' },
     'Army': { symbol: 'XXXXX', name: 'Army' },
     'Army Group': { symbol: 'XXXXXX', name: 'Army Group' },
+    'Command': { symbol: '', name: 'Command' },  // Special designation, no symbol
 };
+
+// All available echelon names for configuration
+export const ALL_ECHELONS = Object.keys(SIZE_SYMBOLS);
 
 export function getNatoSymbolFilename(code: string, affiliation: Affiliation): string {
     const prefix = AFFILIATION_PREFIX[affiliation];
