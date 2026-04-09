@@ -153,11 +153,6 @@ export default function Sidebar({ select }: any) {
             Support: []
         };
 
-        // When filters are active (beyond just search), show ALL matching units
-        // flat — so subordinate units that match a filter aren't hidden behind
-        // unexpanded / non-matching parents.
-        const hasActiveFilters = !!(filterCountry || filterEchelon || filterStatus || filterOperation || filterHealth || filterEffectiveness);
-
         unitsToGroup.forEach(u => {
             if (u.type === 'Command') return; // Skip Commands
             if (u.type === 'Base') {
@@ -165,21 +160,14 @@ export default function Sidebar({ select }: any) {
                 return;
             }
 
-            if (hasActiveFilters) {
-                // Flat mode: every matching unit appears as a root entry
+            // Only show top-level units or direct children of Commands
+            const isTopLevel = !u.parentId;
+            const parentUnit = u.parentId ? units?.find((p: Unit) => p.id === u.parentId) : null;
+            const isChildOfCommand = parentUnit?.type === 'Command';
+
+            if (isTopLevel || isChildOfCommand) {
                 if (groups[u.type]) {
                     groups[u.type].push(u);
-                }
-            } else {
-                // Tree mode: only top-level or direct children of Commands
-                const isTopLevel = !u.parentId;
-                const parentUnit = u.parentId ? units?.find((p: Unit) => p.id === u.parentId) : null;
-                const isChildOfCommand = parentUnit?.type === 'Command';
-
-                if (isTopLevel || isChildOfCommand) {
-                    if (groups[u.type]) {
-                        groups[u.type].push(u);
-                    }
                 }
             }
         });
@@ -207,11 +195,11 @@ export default function Sidebar({ select }: any) {
         return null;
     };
 
-    const renderUnit = (u: Unit, depth: number, allUnits: Unit[], flatMode: boolean = false, rootParentId?: string): React.ReactElement => {
+    const renderUnit = (u: Unit, depth: number, allUnits: Unit[], rootParentId?: string): React.ReactElement => {
         // Get children - pass rootParentId to filter attached units correctly
         // If this is a top-level render, u.id becomes the rootParentId
         const effectiveRootId = rootParentId === undefined ? u.id : rootParentId;
-        const children = flatMode ? [] : getChildren(u.id, allUnits, effectiveRootId);
+        const children = getChildren(u.id, allUnits, effectiveRootId);
         const hasChildren = children.length > 0;
         const isExpanded = expandedUnits.has(u.id);
         const parentCommand = getParentCommand(u);
@@ -312,7 +300,7 @@ export default function Sidebar({ select }: any) {
                     />
                 </div>
 
-                {hasChildren && isExpanded && children.map(child => renderUnit(child, depth + 1, allUnits, false, effectiveRootId))}
+                {hasChildren && isExpanded && children.map(child => renderUnit(child, depth + 1, allUnits, effectiveRootId))}
             </div>
         );
     };
@@ -595,7 +583,7 @@ export default function Sidebar({ select }: any) {
                             </span>
                         </div>
 
-                        {expandedTypes.has(type) && typeUnits.map(u => renderUnit(u, 0, filtered, hasActiveFilters))}
+                        {expandedTypes.has(type) && typeUnits.map(u => renderUnit(u, 0, filtered))}
                     </div>
                 ))}
 
