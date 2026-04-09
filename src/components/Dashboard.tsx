@@ -2,6 +2,7 @@ import { db, useLiveData } from '../database/adapter';
 import { useEffect, useState } from 'react';
 import { calculateRotationStatus } from '../utils';
 import { UnitIcon } from './UnitIcon';
+import { getConfig, DEFAULT_CLOCKS, type DashboardClock } from '../database/config';
 
 export default function Dashboard({ onSelectUnit }: any) {
     const units = useLiveData(() => db.units.toArray(), []);
@@ -9,10 +10,47 @@ export default function Dashboard({ onSelectUnit }: any) {
     const customSymbols = useLiveData(() => db.natoSymbols.toArray(), []);
     const [time, setTime] = useState(new Date());
 
+    // Get configured clocks
+    const config = getConfig();
+    const clocks: DashboardClock[] = config.dashboardClocks || DEFAULT_CLOCKS;
+
     useEffect(() => {
         const interval = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(interval);
     }, []);
+
+    // Format time for a specific timezone
+    const formatTimeForTimezone = (timezone: string): string => {
+        if (timezone === 'local') {
+            return time.toLocaleTimeString('en-US', { hour12: false });
+        }
+        try {
+            return time.toLocaleTimeString('en-US', {
+                hour12: false,
+                timeZone: timezone
+            });
+        } catch {
+            return time.toLocaleTimeString('en-US', { hour12: false });
+        }
+    };
+
+    // Format date for a specific timezone
+    const formatDateForTimezone = (timezone: string): string => {
+        if (timezone === 'local') {
+            return time.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        try {
+            return time.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                timeZone: timezone
+            });
+        } catch {
+            return time.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+    };
 
     const stats = {
         totalUnits: units?.length || 0,
@@ -82,27 +120,44 @@ export default function Dashboard({ onSelectUnit }: any) {
                         padding: 'var(--spacing-md)',
                         background: 'var(--color-bg-secondary)',
                         borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--color-border-primary)'
+                        border: '1px solid var(--color-border-primary)',
+                        display: 'flex',
+                        gap: 'var(--spacing-lg)'
                     }}>
-                        <div style={{
-                            fontSize: 24,
-                            fontWeight: 600,
-                            color: 'var(--color-accent-primary)',
-                            fontFamily: 'var(--font-mono)'
-                        }}>
-                            {time.toLocaleTimeString('en-US', { hour12: false })}
-                        </div>
-                        <div style={{
-                            fontSize: 12,
-                            color: 'var(--color-text-muted)',
-                            marginTop: 'var(--spacing-xs)'
-                        }}>
-                            {time.toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                            })}
-                        </div>
+                        {clocks.map((clock, index) => (
+                            <div key={clock.id} style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                paddingLeft: index > 0 ? 'var(--spacing-lg)' : '0',
+                                borderLeft: index > 0 ? '1px solid var(--color-border-primary)' : 'none'
+                            }}>
+                                <div style={{
+                                    fontSize: 10,
+                                    color: 'var(--color-text-muted)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px',
+                                    marginBottom: 'var(--spacing-xs)'
+                                }}>
+                                    {clock.name}
+                                </div>
+                                <div style={{
+                                    fontSize: 24,
+                                    fontWeight: 600,
+                                    color: clock.timezone === 'UTC' ? 'var(--color-accent-secondary)' : 'var(--color-accent-primary)',
+                                    fontFamily: 'var(--font-mono)'
+                                }}>
+                                    {formatTimeForTimezone(clock.timezone)}
+                                </div>
+                                <div style={{
+                                    fontSize: 11,
+                                    color: 'var(--color-text-muted)',
+                                    marginTop: 'var(--spacing-xs)'
+                                }}>
+                                    {formatDateForTimezone(clock.timezone)}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
                 <div className="tactical-divider"></div>

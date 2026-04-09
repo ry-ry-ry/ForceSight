@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { db, getDb, useLiveData } from '../database/adapter';
 import { parseBackup, getBackupSummary } from '../database/parser';
-import { getConfig } from '../database/config';
+import { getConfig, saveConfig, DEFAULT_CLOCKS, COMMON_TIMEZONES, type DashboardClock } from '../database/config';
 import { themes } from '../theme';
 
 const APP_VERSION = '1.0.0';
@@ -37,6 +37,11 @@ export default function SettingsDialog({
     const [statusMsg, setStatusMsg] = useState('');
     const [statusType, setStatusType] = useState<'success' | 'error'>('success');
 
+    // Dashboard clocks state
+    const [clocks, setClocks] = useState<DashboardClock[]>(() => config.dashboardClocks || DEFAULT_CLOCKS);
+    const [newClockName, setNewClockName] = useState('');
+    const [newClockTimezone, setNewClockTimezone] = useState('UTC');
+
     // Database size — count records across all tables
     const units = useLiveData(() => db.units.toArray(), []);
     const deployments = useLiveData(() => db.deployments.toArray(), []);
@@ -71,6 +76,36 @@ export default function SettingsDialog({
         setStatusMsg(msg);
         setStatusType(type);
         setTimeout(() => setStatusMsg(''), 4000);
+    };
+
+    // Clock management functions
+    const saveClocks = (updatedClocks: DashboardClock[]) => {
+        setClocks(updatedClocks);
+        saveConfig({ ...getConfig(), dashboardClocks: updatedClocks });
+    };
+
+    const addClock = () => {
+        if (!newClockName.trim()) return;
+        const newClock: DashboardClock = {
+            id: crypto.randomUUID(),
+            name: newClockName.trim(),
+            timezone: newClockTimezone
+        };
+        saveClocks([...clocks, newClock]);
+        setNewClockName('');
+        setNewClockTimezone('UTC');
+    };
+
+    const removeClock = (id: string) => {
+        saveClocks(clocks.filter(c => c.id !== id));
+    };
+
+    const updateClock = (id: string, updates: Partial<DashboardClock>) => {
+        saveClocks(clocks.map(c => c.id === id ? { ...c, ...updates } : c));
+    };
+
+    const resetClocks = () => {
+        saveClocks(DEFAULT_CLOCKS);
     };
 
     const handleBackupJson = async () => {
@@ -247,6 +282,118 @@ export default function SettingsDialog({
                                     <option key={t.id} value={t.id}>{t.name}</option>
                                 ))}
                             </select>
+                        </div>
+                    </section>
+
+                    {/* ── Dashboard Clocks ─────────────────────────────────── */}
+                    <section>
+                        <div style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            color: 'var(--color-accent-primary)',
+                            marginBottom: 'var(--spacing-sm)',
+                            fontFamily: 'var(--font-mono)',
+                        }}>
+                            Dashboard Clocks
+                        </div>
+                        <div style={{
+                            padding: 'var(--spacing-md)',
+                            background: 'var(--color-bg-tertiary)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '1px solid var(--color-border-primary)',
+                            display: 'grid',
+                            gap: 'var(--spacing-sm)',
+                        }}>
+                            <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                                Configure timezone clocks displayed on the dashboard.
+                            </div>
+
+                            {/* Current clocks list */}
+                            <div style={{ display: 'grid', gap: 'var(--spacing-xs)' }}>
+                                {clocks.map((clock) => (
+                                    <div key={clock.id} style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 'var(--spacing-sm)',
+                                        padding: 'var(--spacing-sm)',
+                                        background: 'var(--color-bg-primary)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        border: '1px solid var(--color-border-primary)',
+                                    }}>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            value={clock.name}
+                                            onChange={e => updateClock(clock.id, { name: e.target.value })}
+                                            placeholder="Name"
+                                            style={{ width: 100, fontSize: 12 }}
+                                        />
+                                        <select
+                                            className="input"
+                                            value={clock.timezone}
+                                            onChange={e => updateClock(clock.id, { timezone: e.target.value })}
+                                            style={{ flex: 1, fontSize: 12 }}
+                                        >
+                                            {COMMON_TIMEZONES.map(tz => (
+                                                <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                            ))}
+                                        </select>
+                                        <button
+                                            onClick={() => removeClock(clock.id)}
+                                            style={{
+                                                padding: '4px 8px',
+                                                fontSize: 11,
+                                                background: 'transparent',
+                                                color: 'var(--color-text-muted)',
+                                            }}
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Add new clock */}
+                            <div style={{
+                                display: 'flex',
+                                gap: 'var(--spacing-sm)',
+                                marginTop: 'var(--spacing-xs)',
+                            }}>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={newClockName}
+                                    onChange={e => setNewClockName(e.target.value)}
+                                    placeholder="Clock name"
+                                    style={{ width: 120, fontSize: 12 }}
+                                />
+                                <select
+                                    className="input"
+                                    value={newClockTimezone}
+                                    onChange={e => setNewClockTimezone(e.target.value)}
+                                    style={{ flex: 1, fontSize: 12 }}
+                                >
+                                    {COMMON_TIMEZONES.map(tz => (
+                                        <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={addClock}
+                                    disabled={!newClockName.trim()}
+                                    style={{ fontSize: 12 }}
+                                >
+                                    Add
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={resetClocks}
+                                style={{ fontSize: 11, background: 'var(--color-bg-elevated)' }}
+                            >
+                                Reset to Defaults
+                            </button>
                         </div>
                     </section>
 

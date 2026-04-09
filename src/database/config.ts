@@ -16,6 +16,13 @@ export const AVAILABLE_COUNTRIES = [
     'South Korea', 'Australia', 'Canada', 'NATO', 'Other'
 ];
 
+// Dashboard clock configuration
+export interface DashboardClock {
+    id: string;
+    name: string;        // e.g., "Zulu", "Local", "Doha"
+    timezone: string;    // e.g., "UTC", "America/New_York", "Asia/Qatar"
+}
+
 export interface AppConfig {
     configured: boolean;
     backend: BackendType;
@@ -23,7 +30,15 @@ export interface AppConfig {
     cesiumToken?: string;
     // Country-specific echelon configurations
     countryEchelons?: Record<string, string[]>;  // country -> list of enabled echelons
+    // Dashboard clocks
+    dashboardClocks?: DashboardClock[];
 }
+
+// Default clocks: Local time and Zulu (UTC)
+export const DEFAULT_CLOCKS: DashboardClock[] = [
+    { id: 'local', name: 'Local', timezone: 'local' },
+    { id: 'zulu', name: 'Zulu', timezone: 'UTC' }
+];
 
 const DEFAULT_CONFIG: AppConfig = {
     configured: false,
@@ -59,3 +74,23 @@ export function resetConfig(): void {
         // localStorage unavailable
     }
 }
+
+// Common timezone options for users to choose from
+export const COMMON_TIMEZONES = [
+    { value: 'local', label: 'Local Time' },
+    { value: 'UTC', label: 'UTC (Zulu)' },
+    { value: 'America/New_York', label: 'Eastern Time (US)' },
+    { value: 'America/Chicago', label: 'Central Time (US)' },
+    { value: 'America/Denver', label: 'Mountain Time (US)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
+    { value: 'Europe/London', label: 'London (GMT/BST)' },
+    { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)' },
+    { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+    { value: 'Asia/Qatar', label: 'Doha (Qatar)' },
+    { value: 'Asia/Dubai', label: 'Dubai (UAE)' },
+    { value: 'Asia/Kabul', label: 'Kabul (Afghanistan)' },
+    { value: 'Asia/Seoul', label: 'Seoul (South Korea)' },
+    { value: 'Asia/Tokyo', label: 'Tokyo (Japan)' },
+    { value: 'Australia/Sydney', label: 'Sydney (Australia)' },
+    { value: 'Pacific/Honolulu', label: 'Hawaii' },
+];
