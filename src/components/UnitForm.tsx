@@ -23,8 +23,10 @@ function inferEchelon(name: string): string {
     if (lower.includes('command')) return 'Command';
     if (lower.includes('corps')) return 'Corps';
     if (lower.includes('division') || lower.includes('div')) return 'Division';
+    if (lower.includes('wing') || lower.includes('wg')) return 'Wing';
     if (lower.includes('brigade') || lower.includes('bde')) return 'Brigade';
     if (lower.includes('regiment') || lower.includes('regt')) return 'Regiment';
+    if (lower.includes('group') || lower.includes('grp')) return 'Group';
     if (lower.includes('battalion') || lower.includes('bn')) return 'Battalion';
     if (lower.includes('squadron') || lower.includes('sqn')) return 'Squadron';
     if (lower.includes('company') || lower.includes('co')) return 'Company';

@@ -5,7 +5,7 @@ const CONFIG_KEY = 'forcesight-config';
 // Default echelons available when no country-specific config exists
 export const DEFAULT_ECHELONS = [
     'Team/Crew', 'Squad', 'Section', 'Platoon', 'Company',
-    'Squadron', 'Battalion', 'Regiment', 'Brigade',
+    'Squadron', 'Group', 'Battalion', 'Regiment', 'Wing', 'Brigade',
     'Division', 'Corps', 'Army', 'Army Group', 'Command'
 ];
 

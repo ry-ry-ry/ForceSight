@@ -9400,9 +9400,11 @@ export const SIZE_SYMBOLS: Record<string, { symbol: string; name: string }> = {
     'Section': { symbol: '•••', name: 'Section' },
     'Platoon': { symbol: 'I', name: 'Platoon' },
     'Company': { symbol: 'II', name: 'Company' },
-    'Squadron': { symbol: 'III', name: 'Squadron' },  // Cavalry equivalent to Battalion
+    'Squadron': { symbol: 'III', name: 'Squadron' },  // Cavalry/Air equivalent to Battalion
+    'Group': { symbol: 'X', name: 'Group' },  // Air Force equivalent to Regiment
     'Battalion': { symbol: 'III', name: 'Battalion' },
     'Regiment': { symbol: 'X', name: 'Regiment' },
+    'Wing': { symbol: 'XX', name: 'Wing' },  // Air Force equivalent to Brigade
     'Brigade': { symbol: 'XX', name: 'Brigade' },
     'Division': { symbol: 'XXX', name: 'Division' },
     'Corps': { symbol: 'XXXX', name: 'Corps' },
