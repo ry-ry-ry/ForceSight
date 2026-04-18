@@ -79,18 +79,63 @@ export function resetConfig(): void {
 export const COMMON_TIMEZONES = [
     { value: 'local', label: 'Local Time' },
     { value: 'UTC', label: 'UTC (Zulu)' },
-    { value: 'America/New_York', label: 'Eastern Time (US)' },
-    { value: 'America/Chicago', label: 'Central Time (US)' },
-    { value: 'America/Denver', label: 'Mountain Time (US)' },
+
+    // Americas
+    { value: 'Pacific/Honolulu', label: 'Hawaii' },
+    { value: 'America/Anchorage', label: 'Anchorage (Alaska)' },
     { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
+    { value: 'America/Denver', label: 'Mountain Time (US)' },
+    { value: 'America/Chicago', label: 'Central Time (US)' },
+    { value: 'America/New_York', label: 'Eastern Time (US)' },
+    { value: 'America/Toronto', label: 'Toronto (Canada)' },
+    { value: 'America/Mexico_City', label: 'Mexico City' },
+    { value: 'America/Bogota', label: 'Bogot\u00e1 (Colombia)' },
+    { value: 'America/Sao_Paulo', label: 'S\u00e3o Paulo (Brazil)' },
+    { value: 'America/Argentina/Buenos_Aires', label: 'Buenos Aires (Argentina)' },
+
+    // Europe
     { value: 'Europe/London', label: 'London (GMT/BST)' },
-    { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)' },
+    { value: 'Europe/Dublin', label: 'Dublin (Ireland)' },
+    { value: 'Europe/Lisbon', label: 'Lisbon (Portugal)' },
+    { value: 'Europe/Madrid', label: 'Madrid (Spain)' },
     { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+    { value: 'Europe/Brussels', label: 'Brussels (Belgium)' },
+    { value: 'Europe/Amsterdam', label: 'Amsterdam (Netherlands)' },
+    { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)' },
+    { value: 'Europe/Rome', label: 'Rome (Italy)' },
+    { value: 'Europe/Oslo', label: 'Oslo (Norway)' },
+    { value: 'Europe/Stockholm', label: 'Stockholm (Sweden)' },
+    { value: 'Europe/Helsinki', label: 'Helsinki (Finland)' },
+    { value: 'Europe/Warsaw', label: 'Warsaw (Poland)' },
+    { value: 'Europe/Kyiv', label: 'Kyiv (Ukraine)' },
+    { value: 'Europe/Istanbul', label: 'Istanbul (T\u00fcrkiye)' },
+    { value: 'Europe/Moscow', label: 'Moscow (Russia)' },
+
+    // Africa & Middle East
+    { value: 'Africa/Cairo', label: 'Cairo (Egypt)' },
+    { value: 'Africa/Johannesburg', label: 'Johannesburg (South Africa)' },
+    { value: 'Asia/Jerusalem', label: 'Tel Aviv (Israel)' },
+    { value: 'Asia/Baghdad', label: 'Baghdad (Iraq)' },
+    { value: 'Asia/Riyadh', label: 'Riyadh (Saudi Arabia)' },
     { value: 'Asia/Qatar', label: 'Doha (Qatar)' },
     { value: 'Asia/Dubai', label: 'Dubai (UAE)' },
+    { value: 'Asia/Tehran', label: 'Tehran (Iran)' },
+
+    // Asia
+    { value: 'Asia/Karachi', label: 'Karachi (Pakistan)' },
     { value: 'Asia/Kabul', label: 'Kabul (Afghanistan)' },
+    { value: 'Asia/Kolkata', label: 'New Delhi (India)' },
+    { value: 'Asia/Bangkok', label: 'Bangkok (Thailand)' },
+    { value: 'Asia/Jakarta', label: 'Jakarta (Indonesia)' },
+    { value: 'Asia/Singapore', label: 'Singapore' },
+    { value: 'Asia/Manila', label: 'Manila (Philippines)' },
+    { value: 'Asia/Hong_Kong', label: 'Hong Kong' },
+    { value: 'Asia/Shanghai', label: 'Beijing/Shanghai (China)' },
     { value: 'Asia/Seoul', label: 'Seoul (South Korea)' },
     { value: 'Asia/Tokyo', label: 'Tokyo (Japan)' },
+
+    // Pacific
+    { value: 'Australia/Perth', label: 'Perth (Australia)' },
     { value: 'Australia/Sydney', label: 'Sydney (Australia)' },
-    { value: 'Pacific/Honolulu', label: 'Hawaii' },
+    { value: 'Pacific/Auckland', label: 'Auckland (New Zealand)' },
 ];
