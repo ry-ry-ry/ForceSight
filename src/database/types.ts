@@ -51,11 +51,24 @@ export interface Mission {
     id: string;
     unitId: string;
     operationId?: string;
+    subOperationId?: string;
     name: string;
     type: 'Raid' | 'Reconnaissance' | 'Support' | 'Training' | 'Other';
     startDate: string;
     endDate?: string;
     description?: string;
+}
+
+export interface SubOperation {
+    id: string;
+    parentOperationId: string;
+    name: string;
+    type: 'Raid' | 'Reconnaissance' | 'Support' | 'Training' | 'Other';
+    description?: string;
+    startDate: string;
+    endDate?: string;
+    status: 'Planning' | 'Active' | 'Completed' | 'Suspended';
+    createdAt: number;
 }
 
 export interface TaskForce {
@@ -112,6 +125,7 @@ export interface BackupData {
         deployments: Deployment[];
         operations: Operation[];
         missions: Mission[];
+        subOperations: SubOperation[];
         taskForces: TaskForce[];
         mapIcons: MapIcon[];
         mapPins: MapPin[];
@@ -153,6 +167,7 @@ export interface DatabaseAdapter {
     deployments: TableAdapter<Deployment>;
     operations: TableAdapter<Operation>;
     missions: TableAdapter<Mission>;
+    subOperations: TableAdapter<SubOperation>;
     taskForces: TableAdapter<TaskForce>;
     mapIcons: TableAdapter<MapIcon>;
     mapPins: TableAdapter<MapPin>;

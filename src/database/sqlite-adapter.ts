@@ -1,6 +1,6 @@
 import type {
     DatabaseAdapter, TableAdapter, WhereClause, QueryAdapter,
-    Unit, Deployment, Operation, Mission, TaskForce,
+    Unit, Deployment, Operation, Mission, SubOperation, TaskForce,
     MapIcon, MapPin, MapShape, NatoSymbol, BackupData
 } from './types';
 
@@ -9,7 +9,7 @@ type SqlJsDatabase = any;
 type SqlJsStatic = any;
 
 const DB_FILE_NAME = 'forcesight.sqlite';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 // ── SQL table definitions ─────────────────────────────────────────────────────
 
@@ -60,11 +60,23 @@ const TABLE_SCHEMAS: Record<string, string> = {
         id TEXT PRIMARY KEY,
         unitId TEXT NOT NULL,
         operationId TEXT,
+        subOperationId TEXT,
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         startDate TEXT NOT NULL,
         endDate TEXT,
         description TEXT
+    )`,
+    subOperations: `CREATE TABLE IF NOT EXISTS subOperations (
+        id TEXT PRIMARY KEY,
+        parentOperationId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        description TEXT,
+        startDate TEXT NOT NULL,
+        endDate TEXT,
+        status TEXT NOT NULL,
+        createdAt INTEGER NOT NULL
     )`,
     taskForces: `CREATE TABLE IF NOT EXISTS taskForces (
         id TEXT PRIMARY KEY,
@@ -118,7 +130,8 @@ const TABLE_COLUMNS: Record<string, string[]> = {
     units: ['id', 'name', 'type', 'echelon', 'country', 'status', 'health', 'effectiveness', 'parentId', 'attached', 'taskForceId', 'lastRTBDate', 'locationLat', 'locationLng', 'patch', 'natoSymbol', 'affiliation', 'sizeSymbolOverride', 'location', 'baseId', 'createdAt'],
     deployments: ['id', 'unitId', 'name', 'operation', 'operationId', 'startDate', 'endDate'],
     operations: ['id', 'name', 'type', 'description', 'startDate', 'endDate', 'status', 'createdAt'],
-    missions: ['id', 'unitId', 'operationId', 'name', 'type', 'startDate', 'endDate', 'description'],
+    missions: ['id', 'unitId', 'operationId', 'subOperationId', 'name', 'type', 'startDate', 'endDate', 'description'],
+    subOperations: ['id', 'parentOperationId', 'name', 'type', 'description', 'startDate', 'endDate', 'status', 'createdAt'],
     taskForces: ['id', 'name', 'operationId', 'description', 'createdAt'],
     mapIcons: ['id', 'name', 'image', 'createdAt'],
     mapPins: ['id', 'name', 'iconId', 'lat', 'lng', 'description', 'properties', 'createdAt'],
@@ -327,6 +340,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
     deployments!: TableAdapter<Deployment>;
     operations!: TableAdapter<Operation>;
     missions!: TableAdapter<Mission>;
+    subOperations!: TableAdapter<SubOperation>;
     taskForces!: TableAdapter<TaskForce>;
     mapIcons!: TableAdapter<MapIcon>;
     mapPins!: TableAdapter<MapPin>;
@@ -343,6 +357,9 @@ export class SQLiteAdapter implements DatabaseAdapter {
         // Load existing database from OPFS, or create new
         const existingData = await loadFromOPFS();
         this.sqlDb = existingData ? new SQL.Database(existingData) : new SQL.Database();
+
+        // Drop any stale tables from earlier incompatible schemas before recreating.
+        this.dropStaleTables();
 
         // Create tables + migrations table
         this.sqlDb.run(MIGRATIONS_TABLE);
@@ -370,6 +387,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
         this.deployments = sqliteTable<Deployment>(getDb, 'deployments', TABLE_COLUMNS.deployments, notify, scheduleSave);
         this.operations = sqliteTable<Operation>(getDb, 'operations', TABLE_COLUMNS.operations, notify, scheduleSave);
         this.missions = sqliteTable<Mission>(getDb, 'missions', TABLE_COLUMNS.missions, notify, scheduleSave);
+        this.subOperations = sqliteTable<SubOperation>(getDb, 'subOperations', TABLE_COLUMNS.subOperations, notify, scheduleSave);
         this.taskForces = sqliteTable<TaskForce>(getDb, 'taskForces', TABLE_COLUMNS.taskForces, notify, scheduleSave);
         this.mapIcons = sqliteTable<MapIcon>(getDb, 'mapIcons', TABLE_COLUMNS.mapIcons, notify, scheduleSave);
         this.mapPins = sqliteTable<MapPin>(getDb, 'mapPins', TABLE_COLUMNS.mapPins, notify, scheduleSave);
@@ -383,6 +401,30 @@ export class SQLiteAdapter implements DatabaseAdapter {
     private scheduleSave(): void {
         if (this.saveTimer) clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this.persistNow(), 500);
+    }
+
+    /**
+     * Drops tables that exist with an incompatible schema from earlier builds,
+     * so the CREATE TABLE IF NOT EXISTS loop will recreate them correctly.
+     * Only targets tables introduced in this release (no user data can exist yet).
+     */
+    private dropStaleTables(): void {
+        const subOpCols = this.sqlDb!.exec("PRAGMA table_info(subOperations)");
+        const subOpColNames: string[] = subOpCols[0]?.values?.map((v: any[]) => v[1] as string) || [];
+        if (subOpColNames.length > 0) {
+            // Drop if the existing table's columns don't exactly match the current schema.
+            // This catches both missing columns and orphan NOT-NULL columns left over
+            // from earlier incompatible attempts at this feature.
+            const expected = new Set(TABLE_COLUMNS.subOperations);
+            const actual = new Set(subOpColNames);
+            const mismatched =
+                expected.size !== actual.size ||
+                [...expected].some(c => !actual.has(c)) ||
+                [...actual].some(c => !expected.has(c));
+            if (mismatched) {
+                this.sqlDb!.run('DROP TABLE subOperations');
+            }
+        }
     }
 
     private async runMigrations(): Promise<void> {
@@ -409,6 +451,13 @@ export class SQLiteAdapter implements DatabaseAdapter {
         if (!columnNames.includes('baseId')) {
             this.sqlDb!.run('ALTER TABLE units ADD COLUMN baseId TEXT');
         }
+
+        // Migration 3: Add subOperationId to missions (subOperations is recreated cleanly by dropStaleTables + CREATE TABLE IF NOT EXISTS)
+        const missionCols = this.sqlDb!.exec("PRAGMA table_info(missions)");
+        const missionColNames = missionCols[0]?.values?.map((v: any[]) => v[1]) || [];
+        if (!missionColNames.includes('subOperationId')) {
+            this.sqlDb!.run('ALTER TABLE missions ADD COLUMN subOperationId TEXT');
+        }
     }
 
     private async persistNow(): Promise<void> {
@@ -426,13 +475,14 @@ export class SQLiteAdapter implements DatabaseAdapter {
 
     async exportAll(): Promise<BackupData> {
         return {
-            version: 7,
+            version: 8,
             timestamp: new Date().toISOString(),
             data: {
                 units: await this.units.toArray(),
                 deployments: await this.deployments.toArray(),
                 operations: await this.operations.toArray(),
                 missions: await this.missions.toArray(),
+                subOperations: await this.subOperations.toArray(),
                 taskForces: await this.taskForces.toArray(),
                 mapIcons: await this.mapIcons.toArray(),
                 mapPins: await this.mapPins.toArray(),
@@ -452,6 +502,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
         if (src.deployments?.length) await this.deployments.bulkPut(src.deployments);
         if (src.operations?.length) await this.operations.bulkPut(src.operations);
         if (src.missions?.length) await this.missions.bulkPut(src.missions);
+        if (src.subOperations?.length) await this.subOperations.bulkPut(src.subOperations);
         if (src.taskForces?.length) await this.taskForces.bulkPut(src.taskForces);
         if (src.mapIcons?.length) await this.mapIcons.bulkPut(src.mapIcons);
         if (src.mapPins?.length) await this.mapPins.bulkPut(src.mapPins);
@@ -486,11 +537,17 @@ export class SQLiteAdapter implements DatabaseAdapter {
         // Open the imported file
         this.sqlDb = new SQL.Database(data);
 
+        // Drop any stale incompatible tables from pre-release builds.
+        this.dropStaleTables();
+
         // Ensure all tables exist (in case the imported file is from an older version)
         this.sqlDb.run(MIGRATIONS_TABLE);
         for (const sql of Object.values(TABLE_SCHEMAS)) {
             this.sqlDb.run(sql);
         }
+
+        // Run migrations so ALTER TABLE columns on older imports are applied
+        await this.runMigrations();
 
         // Rewire table adapters
         const getDb = () => this.sqlDb!;
@@ -504,6 +561,7 @@ export class SQLiteAdapter implements DatabaseAdapter {
         this.deployments = sqliteTable<Deployment>(getDb, 'deployments', TABLE_COLUMNS.deployments, notify, scheduleSave);
         this.operations = sqliteTable<Operation>(getDb, 'operations', TABLE_COLUMNS.operations, notify, scheduleSave);
         this.missions = sqliteTable<Mission>(getDb, 'missions', TABLE_COLUMNS.missions, notify, scheduleSave);
+        this.subOperations = sqliteTable<SubOperation>(getDb, 'subOperations', TABLE_COLUMNS.subOperations, notify, scheduleSave);
         this.taskForces = sqliteTable<TaskForce>(getDb, 'taskForces', TABLE_COLUMNS.taskForces, notify, scheduleSave);
         this.mapIcons = sqliteTable<MapIcon>(getDb, 'mapIcons', TABLE_COLUMNS.mapIcons, notify, scheduleSave);
         this.mapPins = sqliteTable<MapPin>(getDb, 'mapPins', TABLE_COLUMNS.mapPins, notify, scheduleSave);

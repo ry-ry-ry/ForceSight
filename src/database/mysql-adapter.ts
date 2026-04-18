@@ -1,6 +1,6 @@
 import type {
     DatabaseAdapter, TableAdapter, WhereClause, QueryAdapter,
-    Unit, Deployment, Operation, Mission, TaskForce,
+    Unit, Deployment, Operation, Mission, SubOperation, TaskForce,
     MapIcon, MapPin, MapShape, NatoSymbol, BackupData
 } from './types';
 
@@ -24,7 +24,7 @@ import type {
 //   GET    /api/backup            → returns SQL dump as text
 //   POST   /api/restore           → restores from SQL dump (body = { sql: "..." })
 
-const TABLE_NAMES = ['units', 'deployments', 'operations', 'missions', 'taskForces', 'mapIcons', 'mapPins', 'mapShapes', 'natoSymbols'] as const;
+const TABLE_NAMES = ['units', 'deployments', 'operations', 'missions', 'subOperations', 'taskForces', 'mapIcons', 'mapPins', 'mapShapes', 'natoSymbols'] as const;
 
 function mysqlTable<T extends { id: string }>(
     baseUrl: string,
@@ -106,6 +106,7 @@ export class MySQLAdapter implements DatabaseAdapter {
     deployments!: TableAdapter<Deployment>;
     operations!: TableAdapter<Operation>;
     missions!: TableAdapter<Mission>;
+    subOperations!: TableAdapter<SubOperation>;
     taskForces!: TableAdapter<TaskForce>;
     mapIcons!: TableAdapter<MapIcon>;
     mapPins!: TableAdapter<MapPin>;
@@ -126,6 +127,7 @@ export class MySQLAdapter implements DatabaseAdapter {
         this.deployments = mysqlTable<Deployment>(this.baseUrl, 'deployments', notify);
         this.operations = mysqlTable<Operation>(this.baseUrl, 'operations', notify);
         this.missions = mysqlTable<Mission>(this.baseUrl, 'missions', notify);
+        this.subOperations = mysqlTable<SubOperation>(this.baseUrl, 'subOperations', notify);
         this.taskForces = mysqlTable<TaskForce>(this.baseUrl, 'taskForces', notify);
         this.mapIcons = mysqlTable<MapIcon>(this.baseUrl, 'mapIcons', notify);
         this.mapPins = mysqlTable<MapPin>(this.baseUrl, 'mapPins', notify);
@@ -146,13 +148,14 @@ export class MySQLAdapter implements DatabaseAdapter {
 
     async exportAll(): Promise<BackupData> {
         return {
-            version: 7,
+            version: 8,
             timestamp: new Date().toISOString(),
             data: {
                 units: await this.units.toArray(),
                 deployments: await this.deployments.toArray(),
                 operations: await this.operations.toArray(),
                 missions: await this.missions.toArray(),
+                subOperations: await this.subOperations.toArray(),
                 taskForces: await this.taskForces.toArray(),
                 mapIcons: await this.mapIcons.toArray(),
                 mapPins: await this.mapPins.toArray(),

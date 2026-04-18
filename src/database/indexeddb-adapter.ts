@@ -2,7 +2,7 @@ import Dexie from 'dexie';
 import type { Table } from 'dexie';
 import type {
     DatabaseAdapter, TableAdapter, WhereClause, QueryAdapter,
-    Unit, Deployment, Operation, Mission, TaskForce,
+    Unit, Deployment, Operation, Mission, SubOperation, TaskForce,
     MapIcon, MapPin, MapShape, NatoSymbol, BackupData
 } from './types';
 
@@ -13,6 +13,7 @@ class ForceSightDexie extends Dexie {
     deployments!: Table<Deployment, string>;
     operations!: Table<Operation, string>;
     missions!: Table<Mission, string>;
+    subOperations!: Table<SubOperation, string>;
     taskForces!: Table<TaskForce, string>;
     mapIcons!: Table<MapIcon, string>;
     mapPins!: Table<MapPin, string>;
@@ -85,6 +86,18 @@ class ForceSightDexie extends Dexie {
             mapShapes: 'id, name, type',
             natoSymbols: 'id, name'
         });
+        this.version(11).stores({
+            units: 'id, name, parentId, echelon, country, taskForceId, baseId',
+            deployments: 'id, unitId, operationId',
+            operations: 'id, name, status, startDate',
+            missions: 'id, unitId, operationId, subOperationId',
+            subOperations: 'id, parentOperationId, name, status',
+            taskForces: 'id, name, operationId',
+            mapIcons: 'id, name',
+            mapPins: 'id, name, iconId',
+            mapShapes: 'id, name, type',
+            natoSymbols: 'id, name'
+        });
     }
 }
 
@@ -139,6 +152,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
     deployments!: TableAdapter<Deployment>;
     operations!: TableAdapter<Operation>;
     missions!: TableAdapter<Mission>;
+    subOperations!: TableAdapter<SubOperation>;
     taskForces!: TableAdapter<TaskForce>;
     mapIcons!: TableAdapter<MapIcon>;
     mapPins!: TableAdapter<MapPin>;
@@ -158,6 +172,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
         this.deployments = wrapTable(this.dexie.deployments, notify);
         this.operations = wrapTable(this.dexie.operations, notify);
         this.missions = wrapTable(this.dexie.missions, notify);
+        this.subOperations = wrapTable(this.dexie.subOperations, notify);
         this.taskForces = wrapTable(this.dexie.taskForces, notify);
         this.mapIcons = wrapTable(this.dexie.mapIcons, notify);
         this.mapPins = wrapTable(this.dexie.mapPins, notify);
@@ -173,13 +188,14 @@ export class IndexedDBAdapter implements DatabaseAdapter {
     async exportAll(): Promise<BackupData> {
         const d = this.dexie!;
         return {
-            version: 7,
+            version: 8,
             timestamp: new Date().toISOString(),
             data: {
                 units: await d.units.toArray(),
                 deployments: await d.deployments.toArray(),
                 operations: await d.operations.toArray(),
                 missions: await d.missions.toArray(),
+                subOperations: await d.subOperations.toArray(),
                 taskForces: await d.taskForces.toArray(),
                 mapIcons: await d.mapIcons.toArray(),
                 mapPins: await d.mapPins.toArray(),
@@ -194,7 +210,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
         const src = data.data;
 
         await d.transaction('rw',
-            [d.units, d.deployments, d.operations, d.missions, d.taskForces,
+            [d.units, d.deployments, d.operations, d.missions, d.subOperations, d.taskForces,
              d.mapIcons, d.mapPins, d.mapShapes, d.natoSymbols],
             async () => {
                 if (mode === 'replace') {
@@ -202,6 +218,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
                     await d.deployments.clear();
                     await d.operations.clear();
                     await d.missions.clear();
+                    await d.subOperations.clear();
                     await d.taskForces.clear();
                     await d.mapIcons.clear();
                     await d.mapPins.clear();
@@ -213,6 +230,7 @@ export class IndexedDBAdapter implements DatabaseAdapter {
                 if (src.deployments?.length) await d.deployments.bulkPut(src.deployments);
                 if (src.operations?.length) await d.operations.bulkPut(src.operations);
                 if (src.missions?.length) await d.missions.bulkPut(src.missions);
+                if (src.subOperations?.length) await d.subOperations.bulkPut(src.subOperations);
                 if (src.taskForces?.length) await d.taskForces.bulkPut(src.taskForces);
                 if (src.mapIcons?.length) await d.mapIcons.bulkPut(src.mapIcons);
                 if (src.mapPins?.length) await d.mapPins.bulkPut(src.mapPins);
@@ -228,13 +246,14 @@ export class IndexedDBAdapter implements DatabaseAdapter {
     async clearAll(): Promise<void> {
         const d = this.dexie!;
         await d.transaction('rw',
-            [d.units, d.deployments, d.operations, d.missions, d.taskForces,
+            [d.units, d.deployments, d.operations, d.missions, d.subOperations, d.taskForces,
              d.mapIcons, d.mapPins, d.mapShapes, d.natoSymbols],
             async () => {
                 await d.units.clear();
                 await d.deployments.clear();
                 await d.operations.clear();
                 await d.missions.clear();
+                await d.subOperations.clear();
                 await d.taskForces.clear();
                 await d.mapIcons.clear();
                 await d.mapPins.clear();

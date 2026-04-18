@@ -1,4 +1,4 @@
-import type { BackupData, Unit, Deployment, Operation, Mission, TaskForce, MapIcon, MapPin, MapShape, NatoSymbol } from './types';
+import type { BackupData, Unit, Deployment, Operation, Mission, SubOperation, TaskForce, MapIcon, MapPin, MapShape, NatoSymbol } from './types';
 
 /**
  * Parse any ForceSight backup JSON (v1–current) into a normalised BackupData.
@@ -21,13 +21,14 @@ export function parseBackup(raw: string): BackupData {
     const d = parsed.data;
 
     return {
-        version: 7, // normalised to current
+        version: 8, // normalised to current
         timestamp: parsed.timestamp || new Date().toISOString(),
         data: {
             units: normaliseUnits(d.units || [], version),
             deployments: normaliseDeployments(d.deployments || [], version),
             operations: normaliseOperations(d.operations || []),
             missions: normaliseMissions(d.missions || []),
+            subOperations: normaliseSubOperations(d.subOperations || []),
             taskForces: normaliseTaskForces(d.taskForces || []),
             mapIcons: normaliseMapIcons(d.mapIcons || []),
             mapPins: normaliseMapPins(d.mapPins || []),
@@ -48,6 +49,7 @@ export function getBackupSummary(data: BackupData): string[] {
     if (d.deployments.length) lines.push(`${d.deployments.length} deployments`);
     if (d.operations.length) lines.push(`${d.operations.length} operations`);
     if (d.missions.length) lines.push(`${d.missions.length} missions`);
+    if (d.subOperations?.length) lines.push(`${d.subOperations.length} sub-operations`);
     if (d.taskForces.length) lines.push(`${d.taskForces.length} task forces`);
     if (d.mapIcons.length) lines.push(`${d.mapIcons.length} map icons`);
     if (d.mapPins.length) lines.push(`${d.mapPins.length} map pins`);
@@ -129,12 +131,29 @@ function normaliseMissions(raw: any[]): Mission[] {
         id: m.id || crypto.randomUUID(),
         unitId: m.unitId,
         operationId: m.operationId,
+        subOperationId: m.subOperationId,
         name: m.name || 'Unnamed Mission',
         type: m.type || 'Other',
         startDate: m.startDate || new Date().toISOString().slice(0, 10),
         endDate: m.endDate,
         description: m.description,
     }));
+}
+
+function normaliseSubOperations(raw: any[]): SubOperation[] {
+    return raw
+        .filter(so => so && so.parentOperationId)
+        .map(so => ({
+            id: so.id || crypto.randomUUID(),
+            parentOperationId: so.parentOperationId,
+            name: so.name || 'Unnamed Sub-Operation',
+            type: so.type || 'Other',
+            description: so.description,
+            startDate: so.startDate || new Date().toISOString().slice(0, 10),
+            endDate: so.endDate,
+            status: so.status || 'Active',
+            createdAt: so.createdAt || Date.now(),
+        }));
 }
 
 function normaliseTaskForces(raw: any[]): TaskForce[] {
