@@ -10,7 +10,6 @@ export default function Dashboard({ onSelectUnit }: any) {
     const customSymbols = useLiveData(() => db.natoSymbols.toArray(), []);
     const [time, setTime] = useState(new Date());
 
-    // Get configured clocks
     const config = getConfig();
     const clocks: DashboardClock[] = config.dashboardClocks || DEFAULT_CLOCKS;
 
@@ -19,37 +18,18 @@ export default function Dashboard({ onSelectUnit }: any) {
         return () => clearInterval(interval);
     }, []);
 
-    // Format time for a specific timezone
     const formatTimeForTimezone = (timezone: string): string => {
-        if (timezone === 'local') {
-            return time.toLocaleTimeString('en-US', { hour12: false });
-        }
-        try {
-            return time.toLocaleTimeString('en-US', {
-                hour12: false,
-                timeZone: timezone
-            });
-        } catch {
-            return time.toLocaleTimeString('en-US', { hour12: false });
-        }
+        const opts: Intl.DateTimeFormatOptions = { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' };
+        if (timezone === 'local') return time.toLocaleTimeString('en-GB', opts);
+        try { return time.toLocaleTimeString('en-GB', { ...opts, timeZone: timezone }); }
+        catch { return time.toLocaleTimeString('en-GB', opts); }
     };
 
-    // Format date for a specific timezone
     const formatDateForTimezone = (timezone: string): string => {
-        if (timezone === 'local') {
-            return time.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
-        }
-        try {
-            return time.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-                timeZone: timezone
-            });
-        } catch {
-            return time.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
-        }
+        const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
+        if (timezone === 'local') return time.toLocaleDateString('en-GB', opts).toUpperCase();
+        try { return time.toLocaleDateString('en-GB', { ...opts, timeZone: timezone }).toUpperCase(); }
+        catch { return time.toLocaleDateString('en-GB', opts).toUpperCase(); }
     };
 
     const stats = {
@@ -57,581 +37,543 @@ export default function Dashboard({ onSelectUnit }: any) {
         deployed: units?.filter(u => u.status === 'Deployed').length || 0,
         standby: units?.filter(u => u.status === 'Standby').length || 0,
         training: units?.filter(u => u.status === 'Training').length || 0,
-        activeDeployments: deployments?.filter(d => !d.endDate).length || 0
+        activeDeployments: deployments?.filter(d => !d.endDate).length || 0,
     };
+    const reset = Math.max(0, stats.totalUnits - stats.deployed - stats.standby - stats.training);
 
-    // Calculate rotation needs
     const rotationNeeds = units?.map(unit => {
         const activeDeployment = deployments?.find(d => d.unitId === unit.id && !d.endDate);
         if (!activeDeployment) return null;
-
         const rotationStatus = calculateRotationStatus(unit.type, activeDeployment.startDate);
-        return {
-            unit,
-            deployment: activeDeployment,
-            rotationStatus
-        };
+        return { unit, deployment: activeDeployment, rotationStatus };
     }).filter(Boolean).sort((a, b) => {
         const priDiff = a!.rotationStatus.priority - b!.rotationStatus.priority;
         if (priDiff !== 0) return priDiff;
         return b!.rotationStatus.daysDeployed - a!.rotationStatus.daysDeployed;
     }) || [];
 
-    const recentUnits = units?.slice(-5).reverse() || [];
-
-    const getStatusColor = (status: string) => {
-        const colors: any = {
-            Deployed: 'var(--color-status-deployed)',
-            Standby: 'var(--color-status-standby)',
-            Training: 'var(--color-status-training)',
-            Reset: 'var(--color-status-reset)'
-        };
-        return colors[status] || 'var(--color-text-muted)';
-    };
+    const recentUnits = units?.slice(-6).reverse() || [];
 
     return (
-        <div style={{ padding: 'var(--spacing-2xl)', maxWidth: 1400, margin: '0 auto' }}>
-
-            {/* Header */}
-            <div style={{ marginBottom: 'var(--spacing-2xl)' }} className="animate-fade-in">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-md)' }}>
-                    <div>
-                        <h1 style={{
-                            fontSize: 48,
-                            fontWeight: 700,
-                            background: 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            marginBottom: 'var(--spacing-sm)'
-                        }}>
-                            FORCESIGHT
-                        </h1>
-                        <p style={{
-                            color: 'var(--color-text-muted)',
-                            fontSize: 14,
-                            letterSpacing: '2px',
-                            textTransform: 'uppercase'
-                        }}>
-                            Operational Command Dashboard
-                        </p>
-                    </div>
+        <div
+            className="animate-fade-in"
+            style={{
+                padding: 'clamp(24px, 3vw, 56px) clamp(24px, 4vw, 72px)',
+                maxWidth: 1480,
+                margin: '0 auto',
+                position: 'relative',
+                zIndex: 1,
+            }}
+        >
+            {/* ══════════════════════════════ MASTHEAD ══════════════════════════════ */}
+            <header style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'end', gap: 'var(--spacing-2xl)' }}>
+                <div>
                     <div style={{
-                        textAlign: 'right',
-                        padding: 'var(--spacing-md)',
-                        background: 'var(--color-bg-secondary)',
-                        borderRadius: 'var(--radius-md)',
-                        border: '1px solid var(--color-border-primary)',
-                        display: 'flex',
-                        gap: 'var(--spacing-lg)'
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 11,
+                        letterSpacing: '0.25em',
+                        color: 'var(--muted-soft)',
+                        textTransform: 'uppercase',
+                        marginBottom: 6,
                     }}>
-                        {clocks.map((clock, index) => (
-                            <div key={clock.id} style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                paddingLeft: index > 0 ? 'var(--spacing-lg)' : '0',
-                                borderLeft: index > 0 ? '1px solid var(--color-border-primary)' : 'none'
-                            }}>
-                                <div style={{
-                                    fontSize: 10,
-                                    color: 'var(--color-text-muted)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '1px',
-                                    marginBottom: 'var(--spacing-xs)'
-                                }}>
-                                    {clock.name}
-                                </div>
-                                <div style={{
-                                    fontSize: 24,
-                                    fontWeight: 600,
-                                    color: clock.timezone === 'UTC' ? 'var(--color-accent-secondary)' : 'var(--color-accent-primary)',
-                                    fontFamily: 'var(--font-mono)'
-                                }}>
-                                    {formatTimeForTimezone(clock.timezone)}
-                                </div>
-                                <div style={{
-                                    fontSize: 11,
-                                    color: 'var(--color-text-muted)',
-                                    marginTop: 'var(--spacing-xs)'
-                                }}>
-                                    {formatDateForTimezone(clock.timezone)}
-                                </div>
-                            </div>
-                        ))}
+                        Ref. FS&nbsp;·&nbsp;SECTION 01
+                    </div>
+                    <h1 style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 'clamp(44px, 4.6vw + 8px, 72px)',
+                        fontWeight: 700,
+                        letterSpacing: '0.03em',
+                        lineHeight: 0.95,
+                        color: 'var(--fore)',
+                        margin: 0,
+                    }}>
+                        Forcesight
+                    </h1>
+                    <div style={{
+                        marginTop: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-md)',
+                        fontSize: 12,
+                        color: 'var(--muted)',
+                        letterSpacing: '0.18em',
+                        textTransform: 'uppercase',
+                    }}>
+                        <span>Operations Reference</span>
+                        <span aria-hidden style={{ display: 'inline-block', width: 36, height: 2, background: 'var(--brass)' }} />
+                        <span>Current Standing</span>
                     </div>
                 </div>
-                <div className="tactical-divider"></div>
-            </div>
 
-            {/* Stats Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 'var(--spacing-lg)',
-                marginBottom: 'var(--spacing-2xl)'
-            }}>
-                <StatCard
-                    label="Total Units"
-                    value={stats.totalUnits}
-                    icon="▣"
-                    delay={0}
-                />
-                <StatCard
-                    label="Deployed"
-                    value={stats.deployed}
-                    color="var(--color-status-deployed)"
-                    icon="◈"
-                    delay={0.1}
-                />
-                <StatCard
-                    label="Standby"
-                    value={stats.standby}
-                    color="var(--color-status-standby)"
-                    icon="◆"
-                    delay={0.2}
-                />
-                <StatCard
-                    label="Training"
-                    value={stats.training}
-                    color="var(--color-status-training)"
-                    icon="◇"
-                    delay={0.3}
-                />
-                <StatCard
-                    label="Active Ops"
-                    value={stats.activeDeployments}
-                    color="var(--color-accent-primary)"
-                    icon="◉"
-                    delay={0.4}
-                />
-            </div>
-
-            {/* Main Content Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1fr',
-                gap: 'var(--spacing-xl)'
-            }}>
-
-                {/* Rotation Status */}
-                {rotationNeeds.length > 0 && (
-                    <div className="card animate-fade-in" style={{ animationDelay: '0.5s', gridColumn: '1 / -1' }}>
-                        <h2>Rotation Status</h2>
-                        <div style={{
-                            marginTop: 'var(--spacing-lg)',
-                            display: 'grid',
-                            gap: 'var(--spacing-md)',
-                            maxHeight: '600px',
-                            overflowY: 'auto',
-                            paddingRight: 'var(--spacing-xs)'
+                {/* Clock strip — tabular, hairline-separated, zero chrome */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'stretch',
+                    borderTop: '1px solid var(--rule)',
+                    borderBottom: '1px solid var(--rule)',
+                    padding: '10px 0',
+                }}>
+                    {clocks.map((clock, i) => (
+                        <div key={clock.id} style={{
+                            paddingInline: 'var(--spacing-xl)',
+                            borderLeft: i === 0 ? 'none' : '1px solid var(--rule)',
+                            textAlign: i === 0 ? 'left' : 'center',
+                            minWidth: 0,
                         }}>
-                            {rotationNeeds.map((item, index) => (
-                                <RotationCard
-                                    key={item!.unit.id}
-                                    unit={item!.unit}
-                                    deployment={item!.deployment}
-                                    rotationStatus={item!.rotationStatus}
-                                    onSelect={() => onSelectUnit(item!.unit)}
-                                    delay={0.6 + index * 0.05}
-                                    allUnits={units}
-                                    customSymbols={customSymbols}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Recent Units */}
-                <div className="card animate-fade-in" style={{ animationDelay: '0.7s' }}>
-                    <h2>Recent Units</h2>
-                    <div style={{ marginTop: 'var(--spacing-lg)' }}>
-                        {recentUnits.length === 0 ? (
                             <div style={{
-                                textAlign: 'center',
-                                padding: 'var(--spacing-2xl)',
-                                color: 'var(--color-text-muted)'
+                                fontSize: 10,
+                                fontFamily: 'var(--font-mono)',
+                                letterSpacing: '0.22em',
+                                color: 'var(--muted-soft)',
+                                textTransform: 'uppercase',
+                                marginBottom: 4,
                             }}>
-                                No units created yet
+                                {clock.name}
                             </div>
+                            <div className="num" style={{
+                                fontSize: 22,
+                                fontWeight: 500,
+                                color: 'var(--fore)',
+                                letterSpacing: '0.04em',
+                            }}>
+                                {formatTimeForTimezone(clock.timezone)}
+                            </div>
+                            <div className="num" style={{
+                                fontSize: 10,
+                                color: 'var(--muted)',
+                                letterSpacing: '0.14em',
+                                marginTop: 2,
+                            }}>
+                                {formatDateForTimezone(clock.timezone)}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </header>
+
+            {/* ══════════════════════════════ FORCE STANDING ═════════════════════════════ */}
+            <section style={{ marginTop: 'var(--spacing-3xl)' }}>
+                <SectionHead eyebrow="I." title="Force Standing" subtitle="As recorded at the top of this page load." />
+
+                <div style={{
+                    marginTop: 'var(--spacing-lg)',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+                    borderTop: '1px solid var(--rule)',
+                    borderBottom: '1px solid var(--rule)',
+                }}>
+                    <Counter label="Total Units"      value={stats.totalUnits}        />
+                    <Counter label="Deployed"          value={stats.deployed}          status="deployed" first={false} />
+                    <Counter label="On Standby"        value={stats.standby}           status="standby"  first={false} />
+                    <Counter label="In Training"       value={stats.training}          status="training" first={false} />
+                    <Counter label="Active Operations" value={stats.activeDeployments} status="brass"    first={false} />
+                </div>
+            </section>
+
+            {/* ══════════════════════════════ ROTATION STATUS ════════════════════════════ */}
+            <section style={{ marginTop: 'var(--spacing-3xl)' }}>
+                <SectionHead
+                    eyebrow="II."
+                    title="Rotation Status"
+                    subtitle={rotationNeeds.length > 0
+                        ? `${rotationNeeds.length} active deployment${rotationNeeds.length === 1 ? '' : 's'}, grouped by urgency.`
+                        : 'No units currently deployed.'}
+                />
+
+                {rotationNeeds.length === 0 ? (
+                    <EmptyNotice>All stations nominal — no active deployments to rotate.</EmptyNotice>
+                ) : (
+                    <RotationBuckets
+                        rows={rotationNeeds}
+                        onSelectUnit={onSelectUnit}
+                        allUnits={units}
+                        customSymbols={customSymbols}
+                    />
+                )}
+            </section>
+
+            {/* ══════════════════════════════ RECENT & DISTRIBUTION ══════════════════════ */}
+            <section style={{
+                marginTop: 'var(--spacing-3xl)',
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                gap: 'clamp(32px, 4vw, 64px)',
+            }}>
+                {/* Recent Entries */}
+                <div>
+                    <SectionHead eyebrow="III." title="Recent Entries" subtitle="Last six units filed." />
+                    <div style={{ marginTop: 'var(--spacing-lg)', borderTop: '1px solid var(--rule)' }}>
+                        {recentUnits.length === 0 ? (
+                            <EmptyNotice>No units on file.</EmptyNotice>
                         ) : (
-                            recentUnits.map((unit, index) => (
-                                <div
+                            recentUnits.map((unit) => (
+                                <button
                                     key={unit.id}
                                     onClick={() => onSelectUnit(unit)}
                                     style={{
-                                        display: 'flex',
+                                        display: 'grid',
+                                        gridTemplateColumns: 'auto 1fr auto',
                                         alignItems: 'center',
                                         gap: 'var(--spacing-md)',
-                                        padding: 'var(--spacing-md)',
-                                        marginBottom: 'var(--spacing-sm)',
-                                        background: 'var(--color-bg-tertiary)',
-                                        border: '1px solid var(--color-border-primary)',
-                                        borderRadius: 'var(--radius-sm)',
+                                        width: '100%',
+                                        textAlign: 'left',
+                                        padding: '10px 4px',
+                                        background: 'transparent',
+                                        border: 0,
+                                        borderBottom: '1px solid var(--rule)',
+                                        color: 'var(--fore)',
+                                        textTransform: 'none',
+                                        letterSpacing: 0,
                                         cursor: 'pointer',
-                                        transition: 'all 0.2s ease',
-                                        animation: 'slideIn 0.4s ease forwards',
-                                        animationDelay: `${0.6 + index * 0.1}s`,
-                                        opacity: 0
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'var(--color-bg-elevated)';
-                                        e.currentTarget.style.borderColor = 'var(--color-accent-primary)';
-                                        e.currentTarget.style.transform = 'translateX(4px)';
+                                        e.currentTarget.style.background = 'oklch(from var(--brass) 40% 0.06 h / 0.06)';
+                                        (e.currentTarget.querySelector('[data-rowmark]') as HTMLElement).style.background = 'var(--brass)';
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-                                        e.currentTarget.style.borderColor = 'var(--color-border-primary)';
-                                        e.currentTarget.style.transform = 'translateX(0)';
+                                        e.currentTarget.style.background = 'transparent';
+                                        (e.currentTarget.querySelector('[data-rowmark]') as HTMLElement).style.background = 'transparent';
                                     }}
                                 >
-                                    <UnitIcon
-                                        unit={unit}
-                                        allUnits={units}
-                                        customSymbols={customSymbols}
-                                        size="small"
-                                    />
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{
-                                            fontWeight: 600,
-                                            marginBottom: 'var(--spacing-xs)'
-                                        }}>
-                                            {unit.name}
-                                        </div>
-                                        <div style={{
-                                            fontSize: 12,
-                                            color: 'var(--color-text-muted)'
-                                        }}>
-                                            {unit.echelon || unit.type}
-                                        </div>
-                                    </div>
-                                    <div style={{
-                                        fontSize: 11,
-                                        padding: '4px 8px',
-                                        borderRadius: 'var(--radius-sm)',
-                                        background: getStatusColor(unit.status) + '20',
-                                        color: getStatusColor(unit.status),
-                                        border: `1px solid ${getStatusColor(unit.status)}40`,
-                                        textTransform: 'uppercase',
-                                        fontWeight: 600,
-                                        letterSpacing: '0.5px'
-                                    }}>
-                                        {unit.status}
-                                    </div>
-                                </div>
+                                    <span data-rowmark style={{
+                                        width: 2,
+                                        height: 22,
+                                        background: 'transparent',
+                                        transition: 'background 120ms ease-out',
+                                        marginRight: 6,
+                                    }} />
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                                        <UnitIcon unit={unit} allUnits={units} customSymbols={customSymbols} size="small" />
+                                        <span style={{ minWidth: 0 }}>
+                                            <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--fore)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {unit.name}
+                                            </span>
+                                            <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)' }}>
+                                                {unit.echelon || unit.type}
+                                            </span>
+                                        </span>
+                                    </span>
+                                    <StatusToken status={unit.status} />
+                                </button>
                             ))
                         )}
                     </div>
                 </div>
 
-                {/* Status Breakdown */}
-                <div className="card animate-fade-in" style={{ animationDelay: '0.8s' }}>
-                    <h2>Status Overview</h2>
-                    <div style={{ marginTop: 'var(--spacing-lg)' }}>
-                        <StatusBar
-                            label="Deployed"
-                            value={stats.deployed}
-                            total={stats.totalUnits}
-                            color="var(--color-status-deployed)"
-                        />
-                        <StatusBar
-                            label="Standby"
-                            value={stats.standby}
-                            total={stats.totalUnits}
-                            color="var(--color-status-standby)"
-                        />
-                        <StatusBar
-                            label="Training"
-                            value={stats.training}
-                            total={stats.totalUnits}
-                            color="var(--color-status-training)"
-                        />
-                        <StatusBar
-                            label="Reset"
-                            value={stats.totalUnits - stats.deployed - stats.standby - stats.training}
-                            total={stats.totalUnits}
-                            color="var(--color-status-reset)"
-                        />
+                {/* Distribution */}
+                <div>
+                    <SectionHead eyebrow="IV." title="Distribution" subtitle="Share of the total force by current status." />
+                    <div style={{ marginTop: 'var(--spacing-lg)', borderTop: '1px solid var(--rule)' }}>
+                        <DistributionRow label="Deployed" value={stats.deployed}  total={stats.totalUnits} tone="deployed" />
+                        <DistributionRow label="Standby"  value={stats.standby}   total={stats.totalUnits} tone="standby"  />
+                        <DistributionRow label="Training" value={stats.training}  total={stats.totalUnits} tone="training" />
+                        <DistributionRow label="Reset"    value={reset}           total={stats.totalUnits} tone="reset"    />
                     </div>
                 </div>
-
-            </div>
-
+            </section>
         </div>
     );
 }
 
-function StatCard({ label, value, color, icon, delay }: any) {
-    return (
-        <div
-            className="card animate-fade-in"
-            style={{
-                padding: 'var(--spacing-lg)',
-                animationDelay: `${delay}s`,
-                opacity: 0
-            }}
-        >
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: 'var(--spacing-md)'
-            }}>
-                <div style={{
-                    fontSize: 12,
-                    color: 'var(--color-text-muted)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px'
-                }}>
-                    {label}
-                </div>
-                <div style={{
-                    fontSize: 24,
-                    color: color || 'var(--color-accent-primary)',
-                    opacity: 0.3
-                }}>
-                    {icon}
-                </div>
-            </div>
-            <div style={{
-                fontSize: 36,
-                fontWeight: 700,
-                color: color || 'var(--color-text-primary)',
-                fontFamily: 'var(--font-mono)'
-            }}>
-                {value}
-            </div>
-        </div>
-    );
-}
+/* ══════════════════════════════ Section parts ══════════════════════════════ */
 
-function StatusBar({ label, value, total, color }: any) {
-    const percentage = total > 0 ? (value / total) * 100 : 0;
-
+function SectionHead({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle?: string }) {
     return (
-        <div style={{ marginBottom: 'var(--spacing-lg)' }}>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: 'var(--spacing-xs)',
-                fontSize: 12
+        <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 'var(--spacing-lg)', alignItems: 'baseline' }}>
+            <span style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: '0.08em',
+                color: 'var(--brass)',
+                paddingTop: 6,
             }}>
-                <span style={{ color: 'var(--color-text-secondary)' }}>{label}</span>
-                <span style={{
-                    color: color,
+                {eyebrow}
+            </span>
+            <div>
+                <h2 style={{
+                    fontSize: 'clamp(22px, 1.4vw + 12px, 28px)',
                     fontWeight: 600,
-                    fontFamily: 'var(--font-mono)'
+                    letterSpacing: '0.08em',
+                    margin: 0,
+                    color: 'var(--fore)',
                 }}>
-                    {value} / {total}
-                </span>
-            </div>
-            <div style={{
-                height: 8,
-                background: 'var(--color-bg-primary)',
-                borderRadius: 'var(--radius-sm)',
-                overflow: 'hidden',
-                border: '1px solid var(--color-border-primary)'
-            }}>
-                <div style={{
-                    height: '100%',
-                    width: `${percentage}%`,
-                    background: `linear-gradient(90deg, ${color}, ${color}dd)`,
-                    transition: 'width 1s ease',
-                    boxShadow: `0 0 10px ${color}40`
-                }} />
+                    {title}
+                </h2>
+                {subtitle && (
+                    <div style={{
+                        marginTop: 4,
+                        fontSize: 12,
+                        color: 'var(--muted)',
+                        letterSpacing: '0.04em',
+                    }}>
+                        {subtitle}
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-function RotationCard({ unit, deployment, rotationStatus, onSelect, delay, allUnits, customSymbols }: any) {
-    const getStatusLabel = () => {
-        switch (rotationStatus.status) {
-            case 'overdue':
-                return 'OVERDUE';
-            case 'urgent':
-                return 'URGENT';
-            case 'soon':
-                return 'SOON';
-            default:
-                return 'OK';
-        }
+function Counter({ label, value, status, first }: { label: string; value: number; status?: 'deployed' | 'standby' | 'training' | 'brass'; first?: boolean }) {
+    const colorMap: Record<string, string> = {
+        deployed: 'var(--status-deployed)',
+        standby:  'var(--status-standby)',
+        training: 'var(--status-training)',
+        brass:    'var(--brass)',
     };
-
-    const getStatusMessage = () => {
-        if (rotationStatus.status === 'overdue') {
-            return `${Math.abs(rotationStatus.daysUntilRotation)} days overdue`;
-        }
-        return `Rotate in ${rotationStatus.daysUntilRotation} days`;
-    };
-
-    const parentUnit = allUnits?.find((u: any) => u.id === unit.parentId);
+    const tint = status ? colorMap[status] : 'var(--fore)';
 
     return (
-        <div
-            onClick={onSelect}
-            style={{
-                padding: 'var(--spacing-lg)',
-                background: 'var(--color-bg-tertiary)',
-                border: `2px solid ${rotationStatus.color}`,
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                animation: 'slideIn 0.4s ease forwards',
-                animationDelay: `${delay}s`,
-                opacity: 0,
-                position: 'relative',
-                overflow: 'hidden'
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--color-bg-elevated)';
-                e.currentTarget.style.transform = 'translateX(4px)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'var(--color-bg-tertiary)';
-                e.currentTarget.style.transform = 'translateX(0)';
-            }}
-        >
-            {rotationStatus.status === 'overdue' && (
-                <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    right: 0,
-                    padding: '6px 12px',
-                    background: 'var(--color-status-deployed)',
-                    color: 'white',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '1px',
-                    borderBottomLeftRadius: 'var(--radius-sm)'
-                }}>
-                    ⚠ OVERDUE
-                </div>
-            )}
+        <div style={{
+            padding: '22px 24px',
+            borderLeft: first === false ? '1px solid var(--rule)' : 'none',
+            minWidth: 0,
+        }}>
+            <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.22em',
+                color: 'var(--muted)',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+            }}>
+                {label}
+            </div>
+            <div className="num" style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(32px, 2.4vw + 10px, 44px)',
+                fontWeight: 500,
+                color: tint,
+                letterSpacing: '0.02em',
+                lineHeight: 1,
+            }}>
+                {value.toString().padStart(2, '0')}
+            </div>
+        </div>
+    );
+}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-lg)' }}>
-                <UnitIcon
-                    unit={unit}
-                    allUnits={allUnits}
-                    customSymbols={customSymbols}
-                    size="medium"
-                />
+/* ─── Rotation variants ────────────────────────────────────────────────────── */
 
-                <div style={{ flex: 1 }}>
-                    <div style={{
-                        fontWeight: 700,
-                        fontSize: 16,
-                        marginBottom: 'var(--spacing-xs)'
-                    }}>
-                        {unit.name}
-                    </div>
-                    <div style={{
-                        fontSize: 12,
-                        color: 'var(--color-text-muted)',
-                        marginBottom: 'var(--spacing-xs)'
-                    }}>
-                        {deployment.operation || deployment.name} • {unit.echelon || unit.type}
-                    </div>
-                    {parentUnit && (
+const ROTATION_STATE_COLOR: Record<string, string> = {
+    overdue: 'var(--status-deployed)',
+    urgent:  'var(--status-training)',
+    soon:    'var(--brass)',
+    ok:      'var(--status-standby)',
+};
+
+const SCROLL_BOX: React.CSSProperties = {
+    marginTop: 'var(--spacing-md)',
+    maxHeight: 420,
+    overflowY: 'auto',
+    borderTop: '1px solid var(--rule)',
+    borderBottom: '1px solid var(--rule)',
+    // A subtle inset to signal there's scroll-under content.
+    boxShadow: 'inset 0 -14px 14px -14px oklch(0% 0 0 / 0.45), inset 0 14px 14px -14px oklch(0% 0 0 / 0.45)',
+};
+
+function RotationBuckets({ rows, onSelectUnit, allUnits, customSymbols }: any) {
+    const buckets: Array<{ key: string; title: string }> = [
+        { key: 'overdue', title: 'Overdue' },
+        { key: 'urgent',  title: 'Urgent'  },
+        { key: 'soon',    title: 'Soon'    },
+        { key: 'ok',      title: 'Nominal' },
+    ];
+
+    const grouped: Record<string, any[]> = { overdue: [], urgent: [], soon: [], ok: [] };
+    for (const r of rows) grouped[r.rotationStatus.status].push(r);
+
+    return (
+        <div style={SCROLL_BOX}>
+            {buckets.map(b => {
+                const items = grouped[b.key];
+                if (!items || items.length === 0) return null;
+                const color = ROTATION_STATE_COLOR[b.key];
+                return (
+                    <div key={b.key}>
                         <div style={{
-                            fontSize: 11,
-                            color: 'var(--color-accent-secondary)',
-                            marginBottom: 'var(--spacing-sm)'
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '12px 14px',
+                            background: 'oklch(from var(--paper-1) calc(l - 0.01) c h)',
+                            borderBottom: '1px solid var(--rule)',
+                            position: 'sticky',
+                            top: 0,
+                            zIndex: 1,
                         }}>
-                            Parent: {parentUnit.name}
-                        </div>
-                    )}
-
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: 'var(--spacing-md)',
-                        marginTop: 'var(--spacing-md)'
-                    }}>
-                        <div>
-                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 4 }}>
-                                Days Deployed
-                            </div>
-                            <div style={{
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: 16,
-                                fontWeight: 600,
-                                color: rotationStatus.color
-                            }}>
-                                {rotationStatus.daysDeployed}
-                            </div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 4 }}>
-                                Threshold
-                            </div>
-                            <div style={{
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: 16,
-                                fontWeight: 600
-                            }}>
-                                {rotationStatus.rotationThreshold}
-                            </div>
-                        </div>
-                        <div>
-                            <div style={{ fontSize: 10, color: 'var(--color-text-muted)', marginBottom: 4 }}>
-                                Status
-                            </div>
-                            <div style={{
+                            <span aria-hidden style={{ width: 10, height: 10, background: color, boxShadow: 'inset 0 0 0 1px oklch(0% 0 0 / 0.45)' }} />
+                            <span style={{
+                                fontFamily: 'var(--font-display)',
                                 fontSize: 13,
                                 fontWeight: 700,
-                                color: rotationStatus.color,
+                                letterSpacing: '0.18em',
                                 textTransform: 'uppercase',
-                                letterSpacing: '0.5px'
+                                color: color,
                             }}>
-                                {getStatusMessage()}
-                            </div>
+                                {b.title}
+                            </span>
+                            <span className="num" style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>
+                                {items.length} unit{items.length === 1 ? '' : 's'}
+                            </span>
                         </div>
-                    </div>
-                </div>
 
-                <div style={{
-                    padding: 'var(--spacing-md)',
-                    background: `${rotationStatus.color}20`,
-                    borderRadius: 'var(--radius-md)',
-                    border: `2px solid ${rotationStatus.color}`,
-                    minWidth: 100,
-                    textAlign: 'center'
-                }}>
-                    <div style={{
-                        fontSize: 11,
-                        color: 'var(--color-text-muted)',
-                        marginBottom: 4
-                    }}>
-                        Priority
-                    </div>
-                    <div style={{
-                        fontSize: 24,
-                        fontWeight: 700,
-                        color: rotationStatus.color,
-                        fontFamily: 'var(--font-mono)'
-                    }}>
-                        {getStatusLabel()}
-                    </div>
-                </div>
-            </div>
+                        {items.map((item: any) => {
+                            const { unit, deployment, rotationStatus } = item;
+                            const parentUnit = allUnits?.find((u: any) => u.id === unit.parentId);
+                            const days = rotationStatus.daysUntilRotation;
+                            const label =
+                                rotationStatus.status === 'overdue' ? `${Math.abs(days)}d over` :
+                                `${days}d left`;
 
-            {/* Progress bar */}
+                            return (
+                                <div
+                                    key={unit.id}
+                                    onClick={() => onSelectUnit(unit)}
+                                    style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'auto 1fr auto auto',
+                                        alignItems: 'center',
+                                        gap: 14,
+                                        padding: '10px 14px',
+                                        borderBottom: '1px solid var(--rule)',
+                                        cursor: 'pointer',
+                                        transition: 'background 120ms ease-out',
+                                    }}
+                                    onMouseEnter={(e) => { e.currentTarget.style.background = 'oklch(from var(--brass) 40% 0.06 h / 0.06)'; }}
+                                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                                >
+                                    <UnitIcon unit={unit} allUnits={allUnits} customSymbols={customSymbols} size="small" />
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fore)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {unit.name}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 8 }}>
+                                            <span>{unit.echelon || unit.type}</span>
+                                            {parentUnit && (
+                                                <>
+                                                    <span style={{ color: 'var(--muted-soft)' }}>·</span>
+                                                    <span style={{ color: 'var(--fore-dim)' }}>{parentUnit.name}</span>
+                                                </>
+                                            )}
+                                            <span style={{ color: 'var(--muted-soft)' }}>·</span>
+                                            <span style={{ color: 'var(--fore-dim)' }}>{deployment.operation || deployment.name}</span>
+                                        </div>
+                                    </div>
+                                    <div className="num" style={{ fontSize: 13, fontWeight: 500, color: 'var(--fore)', textAlign: 'right' }}>
+                                        {rotationStatus.daysDeployed}
+                                        <span style={{ color: 'var(--muted-soft)' }}> / {rotationStatus.rotationThreshold}</span>
+                                    </div>
+                                    <div style={{
+                                        fontFamily: 'var(--font-mono)',
+                                        fontSize: 11,
+                                        color: color,
+                                        letterSpacing: '0.08em',
+                                        minWidth: 70,
+                                        textAlign: 'right',
+                                    }}>
+                                        {label}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+/* ─── Distribution ─────────────────────────────────────────────────────────── */
+
+function DistributionRow({ label, value, total, tone }: { label: string; value: number; total: number; tone: 'deployed' | 'standby' | 'training' | 'reset' }) {
+    const pct = total > 0 ? (value / total) * 100 : 0;
+    const color: Record<string, string> = {
+        deployed: 'var(--status-deployed)',
+        standby:  'var(--status-standby)',
+        training: 'var(--status-training)',
+        reset:    'var(--status-reset)',
+    };
+
+    return (
+        <div style={{
+            display: 'grid',
+            gridTemplateColumns: '100px 1fr auto',
+            gap: 'var(--spacing-md)',
+            alignItems: 'center',
+            padding: '14px 0',
+            borderBottom: '1px solid var(--rule)',
+        }}>
             <div style={{
-                marginTop: 'var(--spacing-md)',
-                height: 6,
-                background: 'var(--color-bg-primary)',
-                borderRadius: 'var(--radius-sm)',
-                overflow: 'hidden'
+                fontFamily: 'var(--font-display)',
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--fore-dim)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
             }}>
-                <div style={{
-                    height: '100%',
-                    width: `${Math.min((rotationStatus.daysDeployed / rotationStatus.rotationThreshold) * 100, 100)}%`,
-                    background: `linear-gradient(90deg, ${rotationStatus.color}, ${rotationStatus.color}dd)`,
-                    transition: 'width 1s ease',
-                    boxShadow: `0 0 10px ${rotationStatus.color}40`
-                }} />
+                <span aria-hidden style={{ width: 8, height: 8, background: color[tone], boxShadow: 'inset 0 0 0 1px oklch(0% 0 0 / 0.45)' }} />
+                {label}
             </div>
+            <div style={{ position: 'relative', height: 2, background: 'var(--rule)' }}>
+                <span style={{ position: 'absolute', inset: 0, width: `${pct}%`, background: color[tone] }} />
+            </div>
+            <div className="num" style={{
+                fontSize: 12,
+                color: 'var(--fore)',
+                minWidth: 56,
+                textAlign: 'right',
+            }}>
+                {value} / {total}
+            </div>
+        </div>
+    );
+}
+
+/* ─── Shared ───────────────────────────────────────────────────────────────── */
+
+function StatusToken({ status }: { status: string }) {
+    const map: Record<string, { color: string; label: string }> = {
+        Deployed: { color: 'var(--status-deployed)', label: 'Deployed' },
+        Standby:  { color: 'var(--status-standby)',  label: 'Standby'  },
+        Training: { color: 'var(--status-training)', label: 'Training' },
+        Reset:    { color: 'var(--status-reset)',    label: 'Reset'    },
+    };
+    const s = map[status] || { color: 'var(--muted)', label: status };
+    return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span aria-hidden style={{ width: 7, height: 7, background: s.color, boxShadow: 'inset 0 0 0 1px oklch(0% 0 0 / 0.45)' }} />
+            <span style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: s.color,
+            }}>
+                {s.label}
+            </span>
+        </span>
+    );
+}
+
+function EmptyNotice({ children }: { children: React.ReactNode }) {
+    return (
+        <div style={{
+            marginTop: 'var(--spacing-lg)',
+            paddingBlock: 'var(--spacing-2xl)',
+            borderTop: '1px solid var(--rule)',
+            borderBottom: '1px solid var(--rule)',
+            fontSize: 13,
+            color: 'var(--muted)',
+            fontStyle: 'italic',
+            textAlign: 'center',
+        }}>
+            {children}
         </div>
     );
 }

@@ -96,30 +96,47 @@ export default function OperationsManager({ onSelectUnit }: any) {
         <div style={{ padding: 'var(--spacing-2xl)', maxWidth: 1400, margin: '0 auto' }}>
 
             <div style={{ marginBottom: 'var(--spacing-2xl)' }} className="animate-fade-in">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'end', gap: 'var(--spacing-xl)' }}>
                     <div>
+                        <div style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: 11,
+                            letterSpacing: '0.25em',
+                            color: 'var(--muted-soft)',
+                            textTransform: 'uppercase',
+                            marginBottom: 6,
+                        }}>
+                            Ref. FS · SECTION 02
+                        </div>
                         <h1 style={{
-                            fontSize: 48,
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 'clamp(40px, 4vw + 8px, 60px)',
                             fontWeight: 700,
-                            background: 'linear-gradient(135deg, var(--color-accent-primary), var(--color-accent-secondary))',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            marginBottom: 'var(--spacing-sm)'
+                            letterSpacing: '0.04em',
+                            lineHeight: 0.95,
+                            margin: 0,
+                            color: 'var(--fore)',
                         }}>
-                            OPERATIONS
+                            Operations
                         </h1>
-                        <p style={{
-                            color: 'var(--color-text-muted)',
-                            fontSize: 14,
-                            letterSpacing: '2px',
-                            textTransform: 'uppercase'
+                        <div style={{
+                            marginTop: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 'var(--spacing-md)',
+                            fontSize: 12,
+                            color: 'var(--muted)',
+                            letterSpacing: '0.18em',
+                            textTransform: 'uppercase',
                         }}>
-                            Operational Command Center
-                        </p>
+                            <span>Register</span>
+                            <span aria-hidden style={{ display: 'inline-block', width: 36, height: 2, background: 'var(--brass)' }} />
+                            <span>{operations?.length ?? 0} on file</span>
+                        </div>
                     </div>
-                    <button onClick={handleCreate}>+ New Operation</button>
+                    <button onClick={handleCreate} className="btn-primary">+ New Operation</button>
                 </div>
-                <div className="tactical-divider"></div>
+                <div style={{ marginTop: 'var(--spacing-xl)', borderTop: '1px solid var(--rule)' }} />
             </div>
 
             {/* Filters */}
@@ -359,32 +376,40 @@ function OperationCard({ operation, units, deployments, taskForces, subOperation
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--spacing-lg)' }}>
                 <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-sm)' }}>
-                        <h2 style={{ margin: 0 }}>{operation.name}</h2>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--spacing-lg)', marginBottom: 6, flexWrap: 'wrap' }}>
+                        <h2 style={{ margin: 0, fontSize: 22, letterSpacing: '0.05em' }}>{operation.name}</h2>
                         <span style={{
-                            padding: '4px 10px',
-                            background: `${getTypeColor(operation.type)}20`,
-                            color: getTypeColor(operation.type),
-                            border: `1px solid ${getTypeColor(operation.type)}40`,
-                            borderRadius: 'var(--radius-sm)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontFamily: 'var(--font-display)',
                             fontSize: 11,
                             fontWeight: 600,
+                            letterSpacing: '0.18em',
                             textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
+                            color: getTypeColor(operation.type),
+                            borderBottom: `1px solid ${getTypeColor(operation.type)}`,
+                            paddingBottom: 1,
                         }}>
                             {operation.type}
                         </span>
                         <span style={{
-                            padding: '4px 10px',
-                            background: `${getStatusColor(operation.status)}20`,
-                            color: getStatusColor(operation.status),
-                            border: `1px solid ${getStatusColor(operation.status)}40`,
-                            borderRadius: 'var(--radius-sm)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontFamily: 'var(--font-display)',
                             fontSize: 11,
                             fontWeight: 600,
+                            letterSpacing: '0.18em',
                             textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
+                            color: getStatusColor(operation.status),
                         }}>
+                            <span aria-hidden style={{
+                                width: 7,
+                                height: 7,
+                                background: getStatusColor(operation.status),
+                                boxShadow: 'inset 0 0 0 1px oklch(0% 0 0 / 0.45)',
+                            }} />
                             {operation.status}
                         </span>
                     </div>

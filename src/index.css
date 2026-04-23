@@ -1,505 +1,530 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap');
+/* ───────────────────────────────────────────────────────────────────
+   ForceSight — a typeset operations reference.
+   One theme. Stone neutrals, Ranger-brass accent, doctrinal statuses.
+   Hairlines over containers. Tabular numerals. No glow. No shimmer.
+   ─────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Base Colors */
-  --color-bg-primary: #0a0e27;
-  --color-bg-secondary: #111827;
-  --color-bg-tertiary: #1a1f3a;
-  --color-bg-elevated: #1e2642;
+    color-scheme: dark;
 
-  /* Tactical Accents */
-  --color-accent-primary: #00d9ff;
-  --color-accent-secondary: #0ea5e9;
-  --color-accent-glow: rgba(0, 217, 255, 0.15);
+    /* ─── Palette (OKLCH) ────────────────────────────────────────────
+       Cool stone with a whisper of olive in the hue axis.
+       Warmth comes in through the brass accent and text hue. */
+    --ink:              oklch(12% 0.008 95);       /* page */
+    --paper-1:          oklch(15.5% 0.008 95);     /* panels — use sparingly */
+    --paper-2:          oklch(19% 0.010 95);       /* elevated chrome */
+    --paper-3:          oklch(23% 0.012 95);       /* hover fill for rows */
 
-  /* Status Colors */
-  --color-status-deployed: #ef4444;
-  --color-status-standby: #10b981;
-  --color-status-training: #f59e0b;
-  --color-status-reset: #3b82f6;
+    --rule:             oklch(28% 0.012 95);       /* hairlines */
+    --rule-strong:      oklch(36% 0.014 95);       /* emphasised rules */
 
-  /* Text Colors */
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-muted: #64748b;
+    --fore:             oklch(93% 0.012 85);       /* primary text */
+    --fore-dim:         oklch(78% 0.013 85);       /* secondary text */
+    --muted:            oklch(56% 0.014 85);       /* tertiary labels */
+    --muted-soft:       oklch(42% 0.012 85);       /* captions / meta */
 
-  /* Borders */
-  --color-border-primary: #1e293b;
-  --color-border-accent: #334155;
-  --color-border-glow: rgba(0, 217, 255, 0.3);
+    /* One accent. The whole product. */
+    --brass:            oklch(76% 0.115 86);       /* Ranger-family gold */
+    --brass-soft:       oklch(64% 0.095 86);       /* hover */
+    --brass-ink:        oklch(22% 0.050 86);       /* ink for on-brass surfaces */
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(0, 217, 255, 0.2);
+    /* Status — muted, doctrinal. Not pills, not neon. */
+    --status-deployed:  oklch(58% 0.135 27);       /* brick red */
+    --status-standby:   oklch(62% 0.095 145);      /* olive green */
+    --status-training:  oklch(72% 0.115 75);       /* dry mustard */
+    --status-reset:     oklch(58% 0.070 235);      /* dusty slate-blue */
+    --status-quiet:     oklch(50% 0.010 90);       /* idle / planning */
 
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  --spacing-2xl: 32px;
+    /* ─── Legacy aliases ───────────────────────────────────────────
+       Existing components still reference --color-* tokens. Map them
+       to the new scale so the refactor doesn't need to touch every
+       inline style in one pass. */
+    --color-bg-primary:        var(--ink);
+    --color-bg-secondary:      var(--paper-1);
+    --color-bg-tertiary:       var(--paper-2);
+    --color-bg-elevated:       var(--paper-3);
 
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+    --color-accent-primary:    var(--brass);
+    --color-accent-secondary:  var(--brass-soft);
+    --color-accent-glow:       transparent;        /* no more glow */
 
-  /* Typography — Cyber uses monospace + Rajdhani display */
-  --font-body: 'JetBrains Mono', monospace;
-  --font-heading: 'Rajdhani', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --heading-weight: 600;
-  --heading-spacing: 0.5px;
-  --heading-transform: uppercase;
+    --color-status-deployed:   var(--status-deployed);
+    --color-status-standby:    var(--status-standby);
+    --color-status-training:   var(--status-training);
+    --color-status-reset:      var(--status-reset);
 
-  /* Theme Shape */
-  --card-border-width: 1px;
-  --border-style: solid;
+    --color-text-primary:      var(--fore);
+    --color-text-secondary:    var(--fore-dim);
+    --color-text-muted:        var(--muted);
 
-  /* Background Pattern */
-  --bg-pattern-1: linear-gradient(var(--color-accent-glow) 1px, transparent 1px);
-  --bg-pattern-2: linear-gradient(90deg, var(--color-accent-glow) 1px, transparent 1px);
-  --bg-pattern-size: 20px 20px;
-  --bg-pattern-opacity: 1;
+    --color-border-primary:    var(--rule);
+    --color-border-accent:     var(--rule-strong);
+    --color-border-glow:       transparent;
 
-  /* Card Top Accent */
-  --card-accent-style: linear-gradient(90deg, transparent, var(--color-accent-primary), transparent);
-  --card-accent-height: 2px;
+    /* ─── Typography ────────────────────────────────────────────── */
+    --font-body:    'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Barlow Condensed', 'Inter Condensed', 'Arial Narrow', sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
 
-  /* Sidebar Edge */
-  --sidebar-edge-style: linear-gradient(180deg, transparent, var(--color-accent-primary), transparent);
-  --sidebar-edge-opacity: 0.3;
+    --heading-weight: 600;
+    --heading-spacing: 0.08em;
+    --heading-transform: uppercase;
 
-  /* Select arrow */
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300d9ff' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    /* ─── Spacing ─────────────────────────────────────────────────
+       Kept at generous scales; layouts use rules + whitespace, not cards. */
+    --spacing-xs:  4px;
+    --spacing-sm:  8px;
+    --spacing-md:  12px;
+    --spacing-lg:  16px;
+    --spacing-xl:  24px;
+    --spacing-2xl: 40px;
+    --spacing-3xl: 64px;
 
-  /* Button shimmer */
-  --button-shimmer: linear-gradient(90deg, transparent, var(--color-accent-glow), transparent);
+    /* ─── Shape ───────────────────────────────────────────────────
+       Squared. 2–3px max. Never pill. */
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 3px;
+
+    /* ─── Shadows ─────────────────────────────────────────────────
+       Restrained, cool, no glow. */
+    --shadow-sm: 0 1px 0 0 oklch(0% 0 0 / 0.35);
+    --shadow-md: 0 4px 14px -4px oklch(0% 0 0 / 0.55);
+    --shadow-lg: 0 18px 38px -12px oklch(0% 0 0 / 0.65);
+    --shadow-glow: none;
+
+    /* ─── Legacy vestiges kept empty so old selectors no-op ─── */
+    --card-border-width: 1px;
+    --border-style: solid;
+    --bg-pattern-1: none;
+    --bg-pattern-2: none;
+    --bg-pattern-size: 0;
+    --bg-pattern-opacity: 0;
+    --card-accent-style: transparent;
+    --card-accent-height: 0;
+    --sidebar-edge-style: transparent;
+    --sidebar-edge-opacity: 0;
+    --button-shimmer: transparent;
+    --select-arrow: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='none' stroke='%23a08a4a' stroke-width='1.25' d='M1 1l4 4 4-4'/></svg>");
 }
 
-/* ════════════════════════════════════════════════════════
-   US ARMY THEME
-   Inspired by OCP / operational command dashboards.
-   Barlow Condensed headings, Inter body text.
-   Earth tones, brass accents, squared-off geometry.
-   ════════════════════════════════════════════════════════ */
-[data-theme="army"] {
-  /* ─── Palette ─── */
-  /* Deep earth backgrounds — layered from darkest to lightest */
-  --color-bg-primary: #12100a;
-  --color-bg-secondary: #1a1710;
-  --color-bg-tertiary: #242015;
-  --color-bg-elevated: #2e291c;
+/* The old `data-theme="army"` selector is kept as a no-op for localStorage
+   users who already had it set. Tokens now live on :root. */
+[data-theme="army"] { /* intentionally empty */ }
 
-  /* Brass / gold accents */
-  --color-accent-primary: #c9a227;
-  --color-accent-secondary: #a68520;
-  --color-accent-glow: rgba(201, 162, 39, 0.12);
+/* ─────────────────────────────────────────────────────────────────
+   Base
+   ───────────────────────────────────────────────────────────────── */
 
-  /* Status — muted but distinct, avoids neon */
-  --color-status-deployed: #b5382a;
-  --color-status-standby: #3a7d44;
-  --color-status-training: #c47f17;
-  --color-status-reset: #3570a5;
-
-  /* Text — warm off-whites and tans */
-  --color-text-primary: #ede8d8;
-  --color-text-secondary: #b8ad96;
-  --color-text-muted: #6d6350;
-
-  /* Borders — warm grays, more defined */
-  --color-border-primary: #2e291c;
-  --color-border-accent: #3d3628;
-  --color-border-glow: rgba(201, 162, 39, 0.25);
-
-  /* Shadows — heavier, grounded */
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.55);
-  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.65);
-  --shadow-glow: 0 0 16px rgba(201, 162, 39, 0.12);
-
-  /* ─── Typography ─── */
-  --font-body: 'Inter', -apple-system, sans-serif;
-  --font-heading: 'Barlow Condensed', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --heading-weight: 700;
-  --heading-spacing: 1.5px;
-  --heading-transform: uppercase;
-
-  /* ─── Shape — squared, utilitarian ─── */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --card-border-width: 1px;
-  --border-style: solid;
-
-  /* ─── Background Pattern — subtle topo contour lines ─── */
-  --bg-pattern-1: repeating-linear-gradient(
-    0deg,
-    rgba(201, 162, 39, 0.02) 0px,
-    rgba(201, 162, 39, 0.02) 1px,
-    transparent 1px,
-    transparent 48px
-  );
-  --bg-pattern-2: repeating-linear-gradient(
-    90deg,
-    rgba(201, 162, 39, 0.015) 0px,
-    rgba(201, 162, 39, 0.015) 1px,
-    transparent 1px,
-    transparent 96px
-  );
-  --bg-pattern-size: 100% 100%;
-  --bg-pattern-opacity: 1;
-
-  /* ─── Card Accent — solid left stripe instead of top glow ─── */
-  --card-accent-style: linear-gradient(180deg, var(--color-accent-primary), var(--color-accent-secondary));
-  --card-accent-height: 3px;
-
-  /* ─── Sidebar edge — subdued ─── */
-  --sidebar-edge-style: linear-gradient(180deg, transparent, var(--color-border-accent), transparent);
-  --sidebar-edge-opacity: 0.5;
-
-  /* Select arrow — brass */
-  --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c9a227' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-
-  /* Button shimmer — warmer, subtler */
-  --button-shimmer: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.08), transparent);
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
-/* Army card: left accent stripe instead of top glow */
-[data-theme="army"] .card::before {
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: auto;
-  width: var(--card-accent-height);
-  height: 100%;
-  background: var(--card-accent-style);
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-}
-
-/* Army sidebar: solid top bar accent */
-[data-theme="army"] .sidebar {
-  border-right: 2px solid var(--color-border-accent);
-}
-
-[data-theme="army"] .sidebar::after {
-  display: none;
-}
-
-* {
-  box-sizing: border-box;
+html {
+    /* Tabular numerals project-wide. Dates, counts, coordinates,
+       rotation days — all align on the same decimal/colon axis. */
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 body {
-  margin: 0;
-  font-family: var(--font-body);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-size: 14px;
-  line-height: 1.6;
-  overflow-x: hidden;
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--ink);
+    color: var(--fore);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.55;
+    overflow-x: hidden;
 }
 
-/* Background Pattern */
+/* A fine cross-hatch paper tooth. Visible only at the corner of your
+   eye; you feel it rather than see it. */
 body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: var(--bg-pattern-1), var(--bg-pattern-2);
-  background-size: var(--bg-pattern-size);
-  opacity: var(--bg-pattern-opacity);
-  pointer-events: none;
-  z-index: 0;
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+        repeating-linear-gradient(
+            0deg,
+            oklch(100% 0 0 / 0.012) 0 1px,
+            transparent 1px 3px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            oklch(100% 0 0 / 0.008) 0 1px,
+            transparent 1px 3px
+        );
+    mix-blend-mode: overlay;
+    opacity: 0.4;
 }
+
+/* ─── Type ─────────────────────────────────────────────────────── */
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
-  font-weight: var(--heading-weight);
-  letter-spacing: var(--heading-spacing);
-  margin: 0;
-  text-transform: var(--heading-transform);
+    font-family: var(--font-display);
+    font-weight: var(--heading-weight);
+    letter-spacing: var(--heading-spacing);
+    text-transform: var(--heading-transform);
+    margin: 0;
+    color: var(--fore);
+    line-height: 1.1;
 }
 
 h1 {
-  font-size: 32px;
-  font-weight: 700;
+    font-size: clamp(28px, 2.2vw + 14px, 40px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
 }
 
 h2 {
-  font-size: 24px;
-  color: var(--color-accent-primary);
+    font-size: clamp(18px, 0.9vw + 12px, 22px);
+    font-weight: 600;
+    color: var(--fore);
 }
 
 h3 {
-  font-size: 18px;
-  color: var(--color-text-secondary);
-  margin-bottom: var(--spacing-md);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: var(--spacing-md);
 }
+
+/* Mono is a signal, not a mood. Reserve for tabular data. */
+code, kbd, samp, .mono {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    letter-spacing: -0.01em;
+}
+
+a {
+    color: var(--brass);
+    text-decoration: none;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+}
+a:hover { text-decoration: underline; }
+
+/* ─── Buttons ──────────────────────────────────────────────────── */
 
 button {
-  background: var(--color-bg-elevated);
-  border: var(--card-border-width) var(--border-style) var(--color-border-accent);
-  color: var(--color-text-primary);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--fore-dim);
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 120ms ease-out,
+                border-color 120ms ease-out,
+                background 120ms ease-out;
+    position: relative;
+    overflow: visible;
 }
 
-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: var(--button-shimmer);
-  transition: left 0.5s ease;
-}
-
-button:hover::before {
-  left: 100%;
-}
+/* Kill the inherited shimmer ::before on every button. */
+button::before { content: none; display: none; }
 
 button:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-accent-primary);
-  box-shadow: 0 0 10px var(--color-accent-glow);
+    color: var(--fore);
+    border-color: var(--brass);
+    background: oklch(from var(--brass) 40% 0.06 h / 0.08);
+    box-shadow: none;
 }
 
 button:active {
-  transform: translateY(1px);
+    transform: translateY(0.5px);
 }
 
-.card {
-  background: var(--color-bg-secondary);
-  border: var(--card-border-width) var(--border-style) var(--color-border-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-xl);
-  position: relative;
-  box-shadow: var(--shadow-md);
-  transition: all 0.3s ease;
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: var(--muted);
+    border-color: var(--rule);
 }
 
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--card-accent-height);
-  background: var(--card-accent-style);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+/* A single primary action per view. Applied by adding `.btn-primary`. */
+.btn-primary,
+button.btn-primary {
+    background: var(--brass);
+    border-color: var(--brass);
+    color: var(--brass-ink);
+    font-weight: 600;
+}
+.btn-primary:hover,
+button.btn-primary:hover {
+    background: var(--brass-soft);
+    border-color: var(--brass-soft);
+    color: var(--brass-ink);
 }
 
-.card:hover::before {
-  opacity: 1;
+/* Ghost link-button */
+.btn-ghost,
+button.btn-ghost {
+    border-color: transparent;
+    color: var(--muted);
+    padding-inline: 6px;
+}
+.btn-ghost:hover,
+button.btn-ghost:hover {
+    border-color: transparent;
+    color: var(--brass);
+    background: transparent;
 }
 
-.card:hover {
-  border-color: var(--color-border-accent);
-  box-shadow: var(--shadow-lg);
-}
-
-.sidebar {
-  width: 320px;
-  background: var(--color-bg-secondary);
-  border-right: 1px solid var(--color-border-primary);
-  position: relative;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.sidebar::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 1px;
-  height: 100%;
-  background: var(--sidebar-edge-style);
-  opacity: var(--sidebar-edge-opacity);
-}
+/* ─── Inputs ───────────────────────────────────────────────────── */
 
 .input {
-  width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-sm);
-  border: var(--card-border-width) var(--border-style) var(--color-border-accent);
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  font-family: var(--font-body);
-  font-size: 13px;
-  transition: all 0.2s ease;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--color-accent-primary);
-  box-shadow: 0 0 0 2px var(--color-accent-glow);
+    width: 100%;
+    padding: 8px 11px;
+    background: oklch(from var(--ink) calc(l + 0.015) c h);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-sm);
+    color: var(--fore);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 450;
+    transition: border-color 120ms ease-out, background 120ms ease-out;
 }
 
 .input::placeholder {
-  color: var(--color-text-muted);
+    color: var(--muted-soft);
+    font-style: italic;
+}
+
+.input:hover {
+    border-color: var(--rule-strong);
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--brass);
+    background: oklch(from var(--ink) calc(l + 0.025) c h);
+    box-shadow: inset 0 -1px 0 0 var(--brass);
 }
 
 select.input {
-  cursor: pointer;
-  appearance: none;
-  background-image: var(--select-arrow);
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 36px;
+    cursor: pointer;
+    appearance: none;
+    background-image: var(--select-arrow);
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 30px;
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+textarea.input {
+    line-height: 1.55;
+    resize: vertical;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
+input[type="date"].input {
+    font-family: var(--font-mono);
+    font-size: 12px;
 }
 
+input[type="checkbox"] {
+    accent-color: var(--brass);
+}
+
+/* ─── Card ─────────────────────────────────────────────────────
+   Kept because the codebase uses `.card` everywhere, but stripped
+   of gradients, top-accent, and hover-glow. A card is now a
+   panel of paper with a hairline border and a touch of elevation. */
+
+.card {
+    background: var(--paper-1);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xl);
+    position: relative;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 150ms ease-out;
+}
+
+.card::before { content: none; }
+.card:hover::before { content: none; }
+
+.card:hover {
+    border-color: var(--rule-strong);
+    box-shadow: var(--shadow-sm);
+}
+
+/* A card that acts as a chapter / section container. No padding bg,
+   just rules and room to breathe. Preferred for new layouts. */
+.sheet {
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--rule);
+    padding: var(--spacing-2xl) 0 var(--spacing-xl);
+    margin-top: var(--spacing-xl);
+}
+
+/* ─── Sidebar ──────────────────────────────────────────────────── */
+
+.sidebar {
+    width: 320px;
+    background: var(--paper-1);
+    border-right: 1px solid var(--rule);
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar::after { content: none; display: none; }
+
+/* ─── Rules & dividers ────────────────────────────────────────── */
+
+.tactical-divider,
+.rule {
+    height: 0;
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: var(--spacing-xl) 0;
+    position: relative;
+}
+
+.tactical-divider::before,
+.rule::before { content: none; }
+
+/* A section rule with a short brass nick at the start — like a
+   typewritten separator in a field document. */
+.rule-cap {
+    border: 0;
+    height: 2px;
+    background:
+        linear-gradient(90deg,
+            var(--brass) 0 24px,
+            var(--rule) 24px 100%);
+    margin: var(--spacing-xl) 0 var(--spacing-md);
+}
+
+/* ─── Status markers ──────────────────────────────────────────── */
+
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: var(--spacing-sm);
+    vertical-align: -1px;
+    border-radius: 0;                 /* square, not dot */
+    box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.4);
+}
+.status-indicator::after { content: none; animation: none; }
+
+.status-deployed { background: var(--status-deployed); color: var(--status-deployed); }
+.status-standby  { background: var(--status-standby);  color: var(--status-standby);  }
+.status-training { background: var(--status-training); color: var(--status-training); }
+.status-reset    { background: var(--status-reset);    color: var(--status-reset);    }
+
+/* ─── Chips / tags ────────────────────────────────────────────
+   A chip is text + a coloured underline rule. Not a filled pill.
+   Apply via `.tag` or `.tag.tag--status` etc. Existing inline-styled
+   chips are left alone for now; new code should prefer .tag. */
+.tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fore-dim);
+    border-bottom: 1px solid currentColor;
+    line-height: 1.6;
+}
+.tag--brass    { color: var(--brass); }
+.tag--deployed { color: var(--status-deployed); }
+.tag--standby  { color: var(--status-standby);  }
+.tag--training { color: var(--status-training); }
+.tag--reset    { color: var(--status-reset);    }
+
+/* ─── Tabular data ────────────────────────────────────────────
+   Numbers carry this UI. Use .num for counters, dates, coords. */
+.num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum", "zero";
+    letter-spacing: -0.01em;
+}
+
+/* ─── Tactical key line ─────────────────────────────────────────
+   For page header underlines. 2px, brass, 96px. Document nod. */
+.keyline {
+    display: block;
+    width: 96px;
+    height: 2px;
+    background: var(--brass);
+    margin-top: var(--spacing-md);
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--ink); }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-accent);
-  border-radius: 4px;
+    background: var(--rule);
+    border-radius: 0;
+    border: 2px solid var(--ink);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--rule-strong); }
+
+/* ─── Selection ───────────────────────────────────────────────── */
+
+::selection {
+    background: oklch(from var(--brass) 55% 0.10 h);
+    color: var(--ink);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent-primary);
-}
+/* ─── Motion ──────────────────────────────────────────────────── */
 
-/* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0);   }
 }
 
 @keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0);    }
 }
 
+/* Pulse kept as a token so legacy references don't break, but it no
+   longer runs indefinitely — only plays once when explicitly added. */
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+    0%, 100% { opacity: 1;   }
+    50%      { opacity: 0.6; }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.4s ease forwards;
+    animation: fadeIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-
 .animate-slide-in {
-  animation: slideIn 0.4s ease forwards;
+    animation: slideIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Status Indicators */
-.status-indicator {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: var(--spacing-sm);
-  position: relative;
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
 }
 
-.status-indicator::after {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  opacity: 0;
-  animation: pulse 2s ease infinite;
-}
-
-.status-deployed {
-  background: var(--color-status-deployed);
-  color: var(--color-status-deployed);
-}
-
-.status-standby {
-  background: var(--color-status-standby);
-  color: var(--color-status-standby);
-}
-
-.status-training {
-  background: var(--color-status-training);
-  color: var(--color-status-training);
-}
-
-.status-reset {
-  background: var(--color-status-reset);
-  color: var(--color-status-reset);
-}
-
-/* Tactical Divider */
-.tactical-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--color-border-accent), transparent);
-  margin: var(--spacing-xl) 0;
-  position: relative;
-}
-
-.tactical-divider::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 4px;
-  height: 4px;
-  background: var(--color-accent-primary);
-  border-radius: 50%;
-  box-shadow: 0 0 10px var(--color-accent-primary);
-}
-
-/* Cesium Viewer Overrides */
-.cesium-viewer {
-  font-family: var(--font-body) !important;
-}
-
-.cesium-viewer-bottom {
-  display: none !important;
-}
-
-.cesium-widget canvas {
-  outline: none;
-}
+/* ─── Cesium overrides (unchanged behaviour) ─── */
+.cesium-viewer         { font-family: var(--font-body) !important; }
+.cesium-viewer-bottom  { display: none !important; }
+.cesium-widget canvas  { outline: none; }

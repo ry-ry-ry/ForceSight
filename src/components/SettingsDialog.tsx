@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { db, getDb, useLiveData } from '../database/adapter';
 import { parseBackup, getBackupSummary } from '../database/parser';
 import { getConfig, saveConfig, DEFAULT_CLOCKS, COMMON_TIMEZONES, type DashboardClock } from '../database/config';
-import { themes } from '../theme';
 
 const APP_VERSION = '1.0.0';
 
@@ -15,13 +14,14 @@ const BACKEND_LABELS: Record<string, string> = {
 interface Props {
     open: boolean;
     onClose: () => void;
-    currentTheme: string;
-    setCurrentTheme: (theme: string) => void;
     onRestoreComplete: () => void;
+    // Retained for backwards compatibility with AppRoot; no longer used.
+    currentTheme?: string;
+    setCurrentTheme?: (theme: string) => void;
 }
 
 export default function SettingsDialog({
-    open, onClose, currentTheme, setCurrentTheme, onRestoreComplete
+    open, onClose, onRestoreComplete
 }: Props) {
     const config = getConfig();
     const backend = config.backend ?? 'indexeddb';
@@ -249,41 +249,6 @@ export default function SettingsDialog({
                 </div>
 
                 <div style={{ padding: 'var(--spacing-lg)', display: 'grid', gap: 'var(--spacing-lg)' }}>
-
-                    {/* ── Appearance ─────────────────────────────────────── */}
-                    <section>
-                        <div style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            letterSpacing: '0.1em',
-                            textTransform: 'uppercase',
-                            color: 'var(--color-accent-primary)',
-                            marginBottom: 'var(--spacing-sm)',
-                            fontFamily: 'var(--font-mono)',
-                        }}>
-                            Appearance
-                        </div>
-                        <div style={{
-                            padding: 'var(--spacing-md)',
-                            background: 'var(--color-bg-tertiary)',
-                            borderRadius: 'var(--radius-sm)',
-                            border: '1px solid var(--color-border-primary)',
-                        }}>
-                            <label style={{ display: 'block', fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 6 }}>
-                                Theme
-                            </label>
-                            <select
-                                className="input"
-                                value={currentTheme}
-                                onChange={e => setCurrentTheme(e.target.value)}
-                                style={{ width: '100%' }}
-                            >
-                                {themes.map((t: { id: string; name: string }) => (
-                                    <option key={t.id} value={t.id}>{t.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </section>
 
                     {/* ── Dashboard Clocks ─────────────────────────────────── */}
                     <section>

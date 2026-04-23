@@ -1,3 +1,11 @@
+/**
+ * Theming is retired as a user-facing choice.
+ * ForceSight ships with a single visual system defined in `index.css`.
+ *
+ * These exports are kept as thin shims for the Settings dialog and any
+ * localStorage entries left over from the dual-theme era.
+ */
+
 export interface Theme {
     id: string;
     name: string;
@@ -5,29 +13,24 @@ export interface Theme {
 }
 
 export const themes: Theme[] = [
-    { id: 'cyber', name: 'Cyber', description: 'Cyan neon on deep navy — digital warfare aesthetic' },
-    { id: 'army', name: 'Army', description: 'Brass on earth tones — operational command dashboard' },
+    {
+        id: 'army',
+        name: 'Standard',
+        description: 'The ForceSight house style — stone neutrals, brass accents.',
+    },
 ];
 
 const STORAGE_KEY = 'forcesight-theme';
 
 export function getStoredTheme(): string {
-    try {
-        return localStorage.getItem(STORAGE_KEY) || 'army';
-    } catch {
-        return 'army';
-    }
+    return 'army';
 }
 
 export function applyTheme(themeId: string): void {
     const root = document.documentElement;
-    if (themeId === 'cyber') {
-        root.removeAttribute('data-theme');
-    } else {
-        root.setAttribute('data-theme', themeId);
-    }
+    root.setAttribute('data-theme', 'army');
     try {
-        localStorage.setItem(STORAGE_KEY, themeId);
+        localStorage.setItem(STORAGE_KEY, themeId || 'army');
     } catch {
         // localStorage unavailable
     }
