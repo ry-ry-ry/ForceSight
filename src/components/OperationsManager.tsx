@@ -1,4 +1,5 @@
 import { db, useLiveData } from '../database/adapter';
+import { reconcileUnitStatuses } from '../database/unit-status';
 import { useState } from 'react';
 import { today } from '../utils';
 import { UnitIcon } from './UnitIcon';
@@ -836,6 +837,7 @@ function OperationForm({ operation, deployments, subOperations, missions, onDone
                 for (const d of activeDeps) {
                     await db.deployments.update(d.id, { endDate: closingDate });
                 }
+                await reconcileUnitStatuses(activeDeps.map((d: any) => d.unitId));
 
                 const activeSubOps = (subOperations || []).filter((so: any) => so.parentOperationId === operation.id && so.status !== 'Completed');
                 for (const so of activeSubOps) {

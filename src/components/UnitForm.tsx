@@ -183,6 +183,24 @@ export default function UnitForm({ unit, defaults, onDone }: any) {
             const now = Date.now();
             const unitId = unit?.id || crypto.randomUUID();
 
+            // Warn if user is overriding the deployment-derived status.
+            // Reconciliation flips status based on active deployments after any
+            // deployment edit, so a manual non-Deployed value here is short-lived
+            // if the unit still has open deployments.
+            if (!isBase && unit?.id && status !== unit?.status && status !== 'Deployed') {
+                const activeDeps = (await db.deployments.where('unitId').equals(unit.id).toArray())
+                    .filter(d => !d.endDate);
+                if (activeDeps.length > 0) {
+                    const ok = confirm(
+                        `This unit has ${activeDeps.length} active deployment(s).\n\n` +
+                        `Setting status to "${status}" overrides the auto-derived status. ` +
+                        `It will revert to "Deployed" the next time a deployment of this unit is saved.\n\n` +
+                        `Continue?`
+                    );
+                    if (!ok) return;
+                }
+            }
+
             await db.units.put({
                 id: unitId,
                 name,

@@ -1,4 +1,5 @@
 import { db, useLiveData } from '../../database/adapter';
+import { reconcileUnitStatus, reconcileUnitStatuses } from '../../database/unit-status';
 import type { Unit } from '../../database/types';
 import { today, daysBetween, militaryNameCompare } from '../../utils';
 import { useState } from 'react';
@@ -25,9 +26,10 @@ export default function DeploymentsTab({ unit }: any) {
     };
 
     const handleDelete = async (id: string) => {
-        if (confirm('Delete this deployment?')) {
-            await db.deployments.delete(id);
-        }
+        if (!confirm('Delete this deployment?')) return;
+        const dep = await db.deployments.get(id);
+        await db.deployments.delete(id);
+        if (dep) await reconcileUnitStatus(dep.unitId);
     };
 
     return (
@@ -335,6 +337,7 @@ function DeploymentForm({ deployment, unitId, operations, allUnits, onDone }: an
             unitId,
             ...baseDeployment
         });
+        await reconcileUnitStatus(unitId);
 
         // Save for selected subordinate units (only on create, not edit)
         if (!deployment && applyToSubordinates && selectedSubIds.size > 0) {
@@ -344,6 +347,7 @@ function DeploymentForm({ deployment, unitId, operations, allUnits, onDone }: an
                 ...baseDeployment
             }));
             await db.deployments.bulkPut(subordinateDeployments);
+            await reconcileUnitStatuses(selectedSubIds);
         }
 
         onDone();
